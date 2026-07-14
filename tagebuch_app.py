@@ -550,6 +550,64 @@ HTML = """<!DOCTYPE html>
     margin-top: 12px;
   }
   .upload-btn:hover { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+  /* Übersicht-Tab */
+  .day-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .day-card-date {
+    padding: 10px 16px;
+    background: var(--accent);
+    color: white;
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+  .day-tagebuch {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-tagebuch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-avg-big {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .day-notiz-text {
+    font-size: 0.82rem;
+    color: #666;
+    margin-top: 6px;
+    font-style: italic;
+    line-height: 1.35;
+  }
+  .day-essen {
+    padding: 12px 16px;
+  }
+  .day-essen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .essen-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .essen-item-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.82rem;
+    border-top: 1px solid var(--border);
+    gap: 8px;
+  }
+  .essen-item-time { color: var(--muted); font-size: 0.75rem; min-width: 36px; }
+  .essen-item-kcal { color: #e67e22; font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
+  .no-entry { font-size: 0.8rem; color: var(--muted); padding: 6px 0; font-style: italic; }
 </style>
 </head>
 <body>
@@ -563,6 +621,7 @@ HTML = """<!DOCTYPE html>
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tagebuch')">📓 Tagebuch</button>
     <button class="tab-btn" onclick="switchTab('essen')">🍽️ Essen</button>
+    <button class="tab-btn" onclick="switchTab('uebersicht')">📊 Übersicht</button>
   </div>
 
   <!-- ══ TAB: TAGEBUCH ══ -->
@@ -727,6 +786,13 @@ HTML = """<!DOCTYPE html>
   </div>
 
   </div><!-- end tab-essen -->
+
+  <!-- ══ TAB: ÜBERSICHT ══ -->
+  <div id="tab-uebersicht" class="tab-content">
+    <div id="overview-list">
+      <div class="empty">Lädt…</div>
+    </div>
+  </div>
 
 </div>
 
@@ -928,6 +994,7 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.add('active');
   document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
   if (name === 'essen') loadFood();
+  if (name === 'uebersicht') loadOverview();
 }
 
 // ── Food tracking ─────────────────────────────────────────────
@@ -1102,6 +1169,98 @@ async function loadFood() {
         ${zielHtml}${macroHtml}
       </div>
       ${entriesHtml}
+    </div>`;
+  }).join('');
+}
+
+async function loadOverview() {
+  const [eRes, fRes, sRes] = await Promise.all([
+    fetch('/entries'), fetch('/food-entries'), fetch('/settings')
+  ]);
+  const eData = await eRes.json();
+  const fData = await fRes.json();
+  const sData = await sRes.json().catch(() => ({}));
+  const ziel  = sData.kcal_ziel || null;
+  const list  = document.getElementById('overview-list');
+
+  // Lookup maps
+  const diaryMap = {};
+  (eData.entries || []).forEach(e => diaryMap[e.datum] = e);
+  const foodMap = {};
+  (fData.entries || []).forEach(f => {
+    if (!foodMap[f.datum]) foodMap[f.datum] = [];
+    foodMap[f.datum].push(f);
+  });
+
+  // Alle Tage sammeln und neueste zuerst sortieren
+  const allDates = new Set([...Object.keys(diaryMap), ...Object.keys(foodMap)]);
+  const toNum = d => { const p = d.split('.'); return p[2]+p[1]+p[0]; };
+  const sorted = [...allDates].sort((a, b) => toNum(b).localeCompare(toNum(a)));
+
+  if (!sorted.length) {
+    list.innerHTML = '<div class="empty">Noch keine Einträge</div>';
+    return;
+  }
+
+  const dayNames = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  list.innerHTML = sorted.map(datum => {
+    const [d, m, y] = datum.split('.');
+    const dow = dayNames[new Date(`${y}-${m}-${d}`).getDay()];
+
+    // ── Tagebuch ──
+    const diary = diaryMap[datum];
+    let tbHtml = '';
+    if (diary) {
+      const avgColor = diary.avg >= 4 ? '#4a7c59' : diary.avg >= 3 ? '#e8a020' : '#c0392b';
+      tbHtml = `<div class="day-tagebuch">
+        <div class="day-tagebuch-row">
+          <div>
+            <div class="entry-star-row"><span class="lbl">Stimmung</span>${miniStars(diary.stimmung)}</div>
+            <div class="entry-star-row"><span class="lbl">Energie</span>${miniStars(diary.energie)}</div>
+            <div class="entry-star-row"><span class="lbl">Körper</span>${miniStars(diary.koerper)}</div>
+          </div>
+          <div class="day-avg-big" style="color:${avgColor}">Ø ${diary.avg}</div>
+        </div>
+        ${diary.ort   ? `<div style="font-size:0.78rem;color:var(--accent);margin-top:6px">📍 ${diary.ort}</div>` : ''}
+        ${diary.notiz ? `<div class="day-notiz-text">"${diary.notiz}"</div>` : ''}
+      </div>`;
+    } else {
+      tbHtml = `<div class="day-tagebuch"><div class="no-entry">Kein Tagebucheintrag</div></div>`;
+    }
+
+    // ── Essen ──
+    const foods = foodMap[datum] || [];
+    let esHtml = '';
+    if (foods.length) {
+      const totalKcal = foods.reduce((s, f) => s + (f.kcal || 0), 0);
+      const pct      = ziel && totalKcal ? Math.min(100, Math.round(totalKcal / ziel * 100)) : 0;
+      const barColor = pct >= 100 ? '#c0392b' : pct >= 80 ? '#e8a020' : '#4a7c59';
+      const progressHtml = ziel ? `
+        <div class="progress-wrap" style="margin:4px 0 6px">
+          <div class="progress-bar" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px">${totalKcal} / ${ziel} kcal (${pct}%)</div>` : '';
+      const items = foods.map(f => `
+        <div class="essen-item-row">
+          <span class="essen-item-time">${f.uhrzeit}</span>
+          <span style="flex:1;line-height:1.3">${f.beschreibung || '–'}</span>
+          ${f.kcal ? `<span class="essen-item-kcal">🔥 ${f.kcal}</span>` : ''}
+        </div>`).join('');
+      esHtml = `<div class="day-essen">
+        <div class="day-essen-header">
+          <span class="essen-label">🍽️ Essen</span>
+          ${totalKcal ? `<span style="font-weight:700;font-size:0.88rem;color:#e67e22">🔥 ${totalKcal} kcal</span>` : ''}
+        </div>
+        ${progressHtml}${items}
+      </div>`;
+    } else {
+      esHtml = `<div class="day-essen"><div class="no-entry">Kein Essen eingetragen</div></div>`;
+    }
+
+    return `<div class="day-card">
+      <div class="day-card-date">${dow}, ${datum}</div>
+      ${tbHtml}${esHtml}
     </div>`;
   }).join('');
 }
