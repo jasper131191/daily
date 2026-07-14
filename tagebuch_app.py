@@ -13,7 +13,7 @@ import uuid
 import base64
 import sqlite3
 from datetime import date, datetime
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import Flask, request, jsonify, render_template_string, Response, session, redirect
 
 try:
     import anthropic as _anthropic
@@ -23,6 +23,7 @@ except ImportError:
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "tagebuch-dev-key-bitte-aendern")
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 
 # ── Datenbank ──────────────────────────────────────────────────────────────
 # Lokal: tagebuch.db neben dieser Datei
@@ -68,6 +69,82 @@ def init_db():
     conn.close()
 
 init_db()
+
+# ── Login ─────────────────────────────────────────────────────────────────
+
+LOGIN_HTML = """<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📓 Tagebuch – Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f5f4f0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card {
+    background: #fff; border: 1px solid #e8e5de;
+    border-radius: 20px; box-shadow: 0 2px 24px rgba(0,0,0,0.08);
+    padding: 40px 36px; width: 100%; max-width: 360px; text-align: center;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 6px; }
+  p  { color: #888; font-size: 0.9rem; margin-bottom: 28px; }
+  input {
+    width: 100%; border: 1.5px solid #e8e5de; border-radius: 12px;
+    padding: 14px 16px; font-size: 1rem; font-family: inherit;
+    background: #fafaf8; outline: none; margin-bottom: 14px;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: #4a7c59; background: #fff; }
+  button {
+    width: 100%; background: #4a7c59; color: #fff; border: none;
+    border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+  }
+  button:hover { background: #3a6449; }
+  .err { color: #c0392b; font-size: 0.85rem; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📓 Mein Tagebuch</h1>
+  <p>Bitte Passwort eingeben</p>
+  <form method="post">
+    <input type="password" name="password" placeholder="Passwort" autofocus>
+    <button type="submit">Einloggen</button>
+  </form>
+  {% if error %}<div class="err">Falsches Passwort</div>{% endif %}
+</div>
+</body>
+</html>"""
+
+@app.before_request
+def check_login():
+    """Alle Routen außer /login erfordern Login."""
+    if not APP_PASSWORD:
+        return  # Kein Passwort gesetzt → kein Schutz (lokale Entwicklung)
+    if request.path.startswith("/login") or request.path.startswith("/logout"):
+        return
+    if not session.get("logged_in"):
+        return redirect("/login")
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = False
+    if request.method == "POST":
+        if request.form.get("password") == APP_PASSWORD:
+            session["logged_in"] = True
+            return redirect("/")
+        error = True
+    return render_template_string(LOGIN_HTML, error=error)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
 
 # ── HTML / CSS / JS (Frontend) ─────────────────────────────────────────────
 HTML = """<!DOCTYPE html>
