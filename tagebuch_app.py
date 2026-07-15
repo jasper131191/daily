@@ -616,6 +616,7 @@ HTML = """<!DOCTYPE html>
 
   <div class="header">
     <h1>📓 Mein Tagebuch</h1>
+    <p id="header-subtitle">Wie geht es dir heute?</p>
   </div>
 
   <div class="tabs">
@@ -879,6 +880,7 @@ async function submitEntry() {
       showToast('⚠ Fehler: ' + data.error, true);
     }
   } catch(e) {
+    console.error('submitEntry Fehler:', e);
     showToast('⚠ Verbindungsfehler', true);
   }
   btn.textContent = editingDatum ? 'Speichern' : 'Eintragen';
@@ -897,7 +899,7 @@ function startEdit(e) {
   document.getElementById('submit-btn').textContent = 'Speichern';
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('cancel-btn').style.display = '';
-  document.querySelector('.header p').textContent = `Eintrag vom ${e.datum} bearbeiten`;
+  document.getElementById('header-subtitle').textContent = `Eintrag vom ${e.datum} bearbeiten`;
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
@@ -912,7 +914,7 @@ function cancelEdit() {
   document.getElementById('entry-date').disabled = false;
   document.getElementById('submit-btn').textContent = 'Eintragen';
   document.getElementById('cancel-btn').style.display = 'none';
-  document.querySelector('.header p').textContent = 'Wie geht es dir heute?';
+  document.getElementById('header-subtitle').textContent = 'Wie geht es dir heute?';
   detectLocation();
   checkReady();
 }
@@ -1097,7 +1099,7 @@ async function submitFood() {
       document.getElementById('photo-preview').style.display = 'none';
       selectedPhotoData = null; checkFoodReady(); loadFood();
     } else showToast('⚠ ' + data.error, true);
-  } catch(e) { showToast('⚠ Verbindungsfehler', true); }
+  } catch(e) { console.error('submitFood Fehler:', e); showToast('⚠ Verbindungsfehler', true); }
   btn.textContent = 'Speichern'; checkFoodReady();
 }
 
