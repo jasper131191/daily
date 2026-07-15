@@ -64,6 +64,10 @@ def init_db():
             key   TEXT PRIMARY KEY,
             value TEXT
         );
+        CREATE TABLE IF NOT EXISTS gewicht (
+            datum TEXT PRIMARY KEY,
+            wert  REAL NOT NULL
+        );
     """)
     conn.commit()
     conn.close()
@@ -389,6 +393,15 @@ HTML = """<!DOCTYPE html>
   }
   .btn-icon:hover { opacity: 1; background: var(--accent-light); }
   .btn-del:hover  { background: #fde8e8; }
+  .range-btn {
+    background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 5px 13px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    font-family: inherit; color: var(--muted); transition: all .15s;
+  }
+  .range-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-light); }
+  .stat-avg-box { text-align:center; flex:1; }
+  .stat-avg-val { font-size:1.6rem; font-weight:700; line-height:1.1; }
+  .stat-avg-lbl { font-size:0.72rem; color:var(--muted); margin-top:2px; }
 
   /* Tabs */
   .tabs {
@@ -623,6 +636,7 @@ HTML = """<!DOCTYPE html>
     <button class="tab-btn active" onclick="switchTab('tagebuch')">📓 Tagebuch</button>
     <button class="tab-btn" onclick="switchTab('essen')">🍽️ Essen</button>
     <button class="tab-btn" onclick="switchTab('uebersicht')">📊 Übersicht</button>
+    <button class="tab-btn" onclick="switchTab('statistik')">📈 Statistik</button>
   </div>
 
   <!-- ══ TAB: TAGEBUCH ══ -->
@@ -709,6 +723,22 @@ HTML = """<!DOCTYPE html>
 
   <!-- ══ TAB: ESSEN ══ -->
   <div id="tab-essen" class="tab-content">
+
+  <div class="card" style="margin-bottom:12px;padding:14px 18px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:1.1rem">⚖️</span>
+      <span style="font-size:0.9rem;font-weight:600;color:var(--text)">Gewicht heute</span>
+      <input type="number" id="gewicht-input" step="0.1" min="20" max="300" placeholder="— kg"
+        style="width:90px;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;
+               font-size:0.95rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
+      <button onclick="saveGewicht()"
+        style="background:var(--accent-light);color:var(--accent);border:none;border-radius:8px;
+               padding:7px 14px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit">
+        Speichern
+      </button>
+      <span id="gewicht-status" style="font-size:0.8rem;color:var(--muted)"></span>
+    </div>
+  </div>
 
   <div class="ziel-wrap">
     <label>🎯 Kalorienziel</label>
@@ -798,6 +828,36 @@ HTML = """<!DOCTYPE html>
     <div id="overview-list">
       <div class="empty">Lädt…</div>
     </div>
+  </div>
+
+  <!-- ══ TAB: STATISTIK ══ -->
+  <div id="tab-statistik" class="tab-content">
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="section-title" style="margin-bottom:12px">Stimmung, Energie & Körper</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="range-btn active" onclick="setStatsRange(30,this)">30 Tage</button>
+        <button class="range-btn" onclick="setStatsRange(90,this)">90 Tage</button>
+        <button class="range-btn" onclick="setStatsRange(0,this)">Alles</button>
+      </div>
+      <svg id="mood-chart" viewBox="0 0 360 200" style="width:100%;height:auto;display:block"></svg>
+      <div style="display:flex;gap:16px;margin-top:8px;justify-content:center;font-size:0.8rem">
+        <span><span style="color:#e8a020;font-size:1rem">●</span> Stimmung</span>
+        <span><span style="color:#2980b9;font-size:1rem">●</span> Energie</span>
+        <span><span style="color:#27ae60;font-size:1rem">●</span> Körper</span>
+      </div>
+      <div id="stats-averages" style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)"></div>
+    </div>
+
+    <div class="card" id="gewicht-chart-card" style="display:none">
+      <div class="section-title" style="margin-bottom:8px">⚖️ Gewichtsverlauf</div>
+      <svg id="weight-chart" viewBox="0 0 360 160" style="width:100%;height:auto;display:block"></svg>
+    </div>
+
+    <div class="card" id="stats-empty" style="display:none">
+      <div class="empty">Noch keine Einträge im gewählten Zeitraum</div>
+    </div>
+
   </div>
 
 </div>
@@ -1002,6 +1062,7 @@ function switchTab(name) {
   document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
   if (name === 'essen') loadFood();
   if (name === 'uebersicht') loadOverview();
+  if (name === 'statistik') loadStats();
 }
 
 // ── Food tracking ─────────────────────────────────────────────
@@ -1334,9 +1395,184 @@ async function loadOverview() {
   }).join('');
 }
 
+// ── Gewicht ──────────────────────────────────────────────────
+async function loadGewicht() {
+  try {
+    const res = await fetch('/gewicht');
+    const data = await res.json();
+    const todayEntry = (data.entries||[]).find(g => {
+      const [d,m,y] = g.datum.split('.');
+      return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` === today;
+    });
+    if (todayEntry) {
+      document.getElementById('gewicht-input').value = todayEntry.wert;
+      document.getElementById('gewicht-status').textContent = '✓ gespeichert';
+    }
+  } catch(e) {}
+}
+
+async function saveGewicht() {
+  const val = parseFloat(document.getElementById('gewicht-input').value);
+  if (!val || val < 20 || val > 500) return;
+  const status = document.getElementById('gewicht-status');
+  status.textContent = '…';
+  try {
+    const res = await fetch('/gewicht', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ datum: today, wert: val })
+    });
+    const data = await res.json();
+    status.textContent = data.ok ? '✓ gespeichert' : '✗ Fehler';
+    if (data.ok && document.getElementById('tab-statistik').classList.contains('active')) loadStats();
+  } catch(e) { status.textContent = '✗ Fehler'; }
+}
+
+// ── Statistik ─────────────────────────────────────────────────
+let statsRange = 30;
+let statsCache = null;
+
+function setStatsRange(days, btn) {
+  statsRange = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStats();
+}
+
+async function loadStats() {
+  try {
+    const [eRes, gRes] = await Promise.all([fetch('/entries'), fetch('/gewicht')]);
+    const eData = await eRes.json();
+    const gData = await gRes.json();
+    statsCache = { entries: eData.entries || [], gewicht: gData.entries || [] };
+    renderStats();
+  } catch(e) {}
+}
+
+function filterByRange(list, days) {
+  if (!days) return list;
+  const cutoff = Date.now() - days * 86400000;
+  return list.filter(e => {
+    const [d,m,y] = e.datum.split('.');
+    return new Date(+y, m-1, +d).getTime() >= cutoff;
+  });
+}
+
+function renderStats() {
+  if (!statsCache) return;
+  const entries = filterByRange(statsCache.entries, statsRange)
+    .slice().sort((a,b) => {
+      const ka = a.datum.split('.').reverse().join('');
+      const kb = b.datum.split('.').reverse().join('');
+      return ka.localeCompare(kb);
+    });
+  const gewicht = filterByRange(statsCache.gewicht, statsRange)
+    .slice().sort((a,b) => {
+      const ka = a.datum.split('.').reverse().join('');
+      const kb = b.datum.split('.').reverse().join('');
+      return ka.localeCompare(kb);
+    });
+
+  document.getElementById('stats-empty').style.display = (!entries.length && !gewicht.length) ? '' : 'none';
+  drawMoodChart(entries);
+
+  if (entries.length) {
+    const avg = k => (entries.reduce((s,e) => s+(e[k]||0), 0) / entries.length).toFixed(1);
+    const avgBox = (val, lbl, color) =>
+      `<div class="stat-avg-box">
+        <div class="stat-avg-val" style="color:${color}">${val}</div>
+        <div class="stat-avg-lbl">${lbl}</div>
+      </div>`;
+    document.getElementById('stats-averages').innerHTML =
+      avgBox(avg('stimmung'), 'Ø Stimmung', '#e8a020') +
+      avgBox(avg('energie'),  'Ø Energie',  '#2980b9') +
+      avgBox(avg('koerper'),  'Ø Körper',   '#27ae60') +
+      avgBox(entries.length,  'Einträge',   'var(--text)');
+  } else {
+    document.getElementById('stats-averages').innerHTML = '';
+  }
+
+  if (gewicht.length) {
+    document.getElementById('gewicht-chart-card').style.display = '';
+    drawWeightChart(gewicht);
+  } else {
+    document.getElementById('gewicht-chart-card').style.display = 'none';
+  }
+}
+
+function drawMoodChart(entries) {
+  const svg = document.getElementById('mood-chart');
+  if (!entries.length) {
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#aaa" font-size="13">Keine Daten im Zeitraum</text>';
+    return;
+  }
+  const W=360, H=200, pL=22, pR=10, pT=12, pB=26;
+  const w=W-pL-pR, h=H-pT-pB, n=entries.length;
+  const xS = i => pL + (n>1 ? i/(n-1)*w : w/2);
+  const yS = v => pT + h - (v-1)/4*h;
+  let s = '';
+  for (let v=1;v<=5;v++) {
+    const y=yS(v).toFixed(1);
+    s+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#e8e8e4" stroke-width="${v===3?1:0.5}"/>`;
+    s+=`<text x="${pL-3}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#bbb">${v}</text>`;
+  }
+  const lines = [
+    { key:'stimmung', color:'#e8a020' },
+    { key:'energie',  color:'#2980b9' },
+    { key:'koerper',  color:'#27ae60' },
+  ];
+  lines.forEach(({key,color}) => {
+    const path = entries.map((e,i) => `${i?'L':'M'}${xS(i).toFixed(1)},${yS(e[key]).toFixed(1)}`).join('');
+    s+=`<path d="${path}" stroke="${color}" stroke-width="2" fill="none" stroke-linejoin="round" opacity="0.85"/>`;
+    if (n<=90) entries.forEach((e,i) => {
+      s+=`<circle cx="${xS(i).toFixed(1)}" cy="${yS(e[key]).toFixed(1)}" r="${n>30?1.5:2.5}" fill="${color}" opacity="0.85"/>`;
+    });
+  });
+  const step = Math.max(1,Math.floor(n/4));
+  const idxs = new Set([0, ...Array.from({length:Math.floor(n/step)},(_,i)=>(i+1)*step).filter(i=>i<n), n-1]);
+  idxs.forEach(i => {
+    const [d,m]=entries[i].datum.split('.');
+    s+=`<text x="${xS(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#aaa">${d}.${m}</text>`;
+  });
+  svg.innerHTML = s;
+}
+
+function drawWeightChart(gewicht) {
+  const svg = document.getElementById('weight-chart');
+  if (!gewicht.length) { svg.innerHTML=''; return; }
+  const W=360, H=160, pL=36, pR=10, pT=12, pB=24;
+  const w=W-pL-pR, h=H-pT-pB, n=gewicht.length;
+  const vals = gewicht.map(g=>g.wert);
+  const yMin=Math.floor(Math.min(...vals)-0.5), yMax=Math.ceil(Math.max(...vals)+0.5);
+  const xS = i => pL + (n>1?i/(n-1)*w:w/2);
+  const yS = v => pT + h - (v-yMin)/(yMax-yMin)*h;
+  let s='';
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const v=yMin+i*(yMax-yMin)/steps;
+    const y=yS(v).toFixed(1);
+    s+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#e8e8e4" stroke-width="0.8"/>`;
+    s+=`<text x="${pL-3}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="#aaa">${v.toFixed(1)}</text>`;
+  }
+  const path=gewicht.map((g,i)=>`${i?'L':'M'}${xS(i).toFixed(1)},${yS(g.wert).toFixed(1)}`).join('');
+  s+=`<path d="${path}" stroke="#555" stroke-width="2" fill="none" stroke-linejoin="round"/>`;
+  gewicht.forEach((g,i)=>{
+    const x=xS(i).toFixed(1), y=yS(g.wert).toFixed(1);
+    s+=`<circle cx="${x}" cy="${y}" r="3" fill="#555"/>`;
+    if(n<=25) s+=`<text x="${x}" y="${(+y-6).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="#555">${g.wert}</text>`;
+  });
+  const step=Math.max(1,Math.floor(n/4));
+  const idxs=new Set([0,...Array.from({length:Math.floor(n/step)},(_,i)=>(i+1)*step).filter(i=>i<n),n-1]);
+  idxs.forEach(i=>{
+    const[d,m]=gewicht[i].datum.split('.');
+    s+=`<text x="${xS(i).toFixed(1)}" y="${H-3}" text-anchor="middle" font-size="9" fill="#aaa">${d}.${m}</text>`;
+  });
+  svg.innerHTML=s;
+}
+
 loadEntries();
 loadFood();
 loadZiel();
+loadGewicht();
 detectLocation();
 
 async function detectLocation() {
@@ -1672,6 +1908,40 @@ def serve_food_photo(entry_id):
 # ── Admin: Daten-Import (für einmalige Migration von Mac → Cloud) ──────────
 # Sende POST /admin/import mit Header X-Admin-Key: DEIN_ADMIN_KEY
 # Body: {"eintraege": [...], "food_log": [...], "settings": {...}}
+
+@app.route("/gewicht")
+def get_gewicht():
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT datum, wert FROM gewicht "
+            "ORDER BY substr(datum,7,4)||substr(datum,4,2)||substr(datum,1,2)"
+        ).fetchall()
+        conn.close()
+        return jsonify({"entries": [dict(r) for r in rows]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/gewicht", methods=["POST"])
+def save_gewicht():
+    try:
+        data = request.get_json()
+        datum_raw = data.get("datum", "")
+        try:
+            entry_date = datetime.strptime(datum_raw, "%Y-%m-%d").date() if datum_raw else date.today()
+        except Exception:
+            entry_date = date.today()
+        datum = entry_date.strftime("%d.%m.%Y")
+        wert = float(data.get("wert", 0))
+        conn = get_db()
+        conn.execute("INSERT OR REPLACE INTO gewicht (datum, wert) VALUES (?,?)", (datum, wert))
+        conn.commit()
+        conn.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.route("/admin/import", methods=["POST"])
 def admin_import():
