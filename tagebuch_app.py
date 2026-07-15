@@ -840,11 +840,17 @@ HTML = """<!DOCTYPE html>
         <button class="range-btn" onclick="setStatsRange(90,this)">90 Tage</button>
         <button class="range-btn" onclick="setStatsRange(0,this)">Alles</button>
       </div>
-      <svg id="mood-chart" viewBox="0 0 360 200" style="width:100%;height:auto;display:block"></svg>
-      <div style="display:flex;gap:16px;margin-top:8px;justify-content:center;font-size:0.8rem">
-        <span><span style="color:#e8a020;font-size:1rem">●</span> Stimmung</span>
-        <span><span style="color:#2980b9;font-size:1rem">●</span> Energie</span>
-        <span><span style="color:#27ae60;font-size:1rem">●</span> Körper</span>
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.8rem;font-weight:700;color:#e8a020;margin-bottom:4px;letter-spacing:0.04em">😊 STIMMUNG</div>
+        <svg id="chart-stimmung" viewBox="0 0 360 130" style="width:100%;height:auto;display:block"></svg>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.8rem;font-weight:700;color:#2980b9;margin-bottom:4px;letter-spacing:0.04em">⚡ ENERGIE</div>
+        <svg id="chart-energie" viewBox="0 0 360 130" style="width:100%;height:auto;display:block"></svg>
+      </div>
+      <div style="margin-bottom:4px">
+        <div style="font-size:0.8rem;font-weight:700;color:#27ae60;margin-bottom:4px;letter-spacing:0.04em">💪 KÖRPER</div>
+        <svg id="chart-koerper" viewBox="0 0 360 130" style="width:100%;height:auto;display:block"></svg>
       </div>
       <div id="stats-averages" style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)"></div>
     </div>
@@ -1473,7 +1479,9 @@ function renderStats() {
     });
 
   document.getElementById('stats-empty').style.display = (!entries.length && !gewicht.length) ? '' : 'none';
-  drawMoodChart(entries);
+  drawSingleChart('stimmung', '#e8a020', entries);
+  drawSingleChart('energie',  '#2980b9', entries);
+  drawSingleChart('koerper',  '#27ae60', entries);
 
   if (entries.length) {
     const avg = k => (entries.reduce((s,e) => s+(e[k]||0), 0) / entries.length).toFixed(1);
@@ -1499,38 +1507,36 @@ function renderStats() {
   }
 }
 
-function drawMoodChart(entries) {
-  const svg = document.getElementById('mood-chart');
+function drawSingleChart(key, color, entries) {
+  const svg = document.getElementById('chart-' + key);
   if (!entries.length) {
-    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#aaa" font-size="13">Keine Daten im Zeitraum</text>';
+    svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#aaa" font-size="12">Keine Daten im Zeitraum</text>';
     return;
   }
-  const W=360, H=200, pL=22, pR=10, pT=12, pB=26;
+  const W=360, H=130, pL=22, pR=10, pT=10, pB=24;
   const w=W-pL-pR, h=H-pT-pB, n=entries.length;
   const xS = i => pL + (n>1 ? i/(n-1)*w : w/2);
   const yS = v => pT + h - (v-1)/4*h;
   let s = '';
+  // Hintergrund-Rasterlinien
   for (let v=1;v<=5;v++) {
     const y=yS(v).toFixed(1);
     s+=`<line x1="${pL}" y1="${y}" x2="${W-pR}" y2="${y}" stroke="#e8e8e4" stroke-width="${v===3?1:0.5}"/>`;
     s+=`<text x="${pL-3}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#bbb">${v}</text>`;
   }
-  const lines = [
-    { key:'stimmung', color:'#e8a020' },
-    { key:'energie',  color:'#2980b9' },
-    { key:'koerper',  color:'#27ae60' },
-  ];
-  lines.forEach(({key,color}) => {
-    const path = entries.map((e,i) => `${i?'L':'M'}${xS(i).toFixed(1)},${yS(e[key]).toFixed(1)}`).join('');
-    s+=`<path d="${path}" stroke="${color}" stroke-width="2" fill="none" stroke-linejoin="round" opacity="0.85"/>`;
-    if (n<=90) entries.forEach((e,i) => {
-      s+=`<circle cx="${xS(i).toFixed(1)}" cy="${yS(e[key]).toFixed(1)}" r="${n>30?1.5:2.5}" fill="${color}" opacity="0.85"/>`;
-    });
+  // Linie
+  const path = entries.map((e,i) => `${i?'L':'M'}${xS(i).toFixed(1)},${yS(e[key]).toFixed(1)}`).join('');
+  s+=`<path d="${path}" stroke="${color}" stroke-width="2" fill="none" stroke-linejoin="round"/>`;
+  // Punkte
+  const r = n>60?1.5:n>30?2:2.8;
+  entries.forEach((e,i) => {
+    s+=`<circle cx="${xS(i).toFixed(1)}" cy="${yS(e[key]).toFixed(1)}" r="${r}" fill="${color}"/>`;
   });
-  const step = Math.max(1,Math.floor(n/4));
-  const idxs = new Set([0, ...Array.from({length:Math.floor(n/step)},(_,i)=>(i+1)*step).filter(i=>i<n), n-1]);
-  idxs.forEach(i => {
-    const [d,m]=entries[i].datum.split('.');
+  // X-Achse Beschriftung
+  const step=Math.max(1,Math.floor(n/4));
+  const idxs=new Set([0,...Array.from({length:Math.floor(n/step)},(_,i)=>(i+1)*step).filter(i=>i<n),n-1]);
+  idxs.forEach(i=>{
+    const[d,m]=entries[i].datum.split('.');
     s+=`<text x="${xS(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#aaa">${d}.${m}</text>`;
   });
   svg.innerHTML = s;
