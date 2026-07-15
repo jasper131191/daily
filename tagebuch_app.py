@@ -775,6 +775,11 @@ HTML = """<!DOCTYPE html>
 
     <div class="btn-row" style="margin-top:16px">
       <button id="food-submit-btn" onclick="submitFood()" disabled>Speichern</button>
+      <button id="food-cancel-btn" onclick="cancelFoodEdit()"
+        style="display:none;background:var(--bg);color:var(--muted);border:1.5px solid var(--border);
+               border-radius:14px;padding:12px 20px;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit">
+        Abbrechen
+      </button>
       <input type="date" id="food-date" class="date-input">
     </div>
   </div>
@@ -1001,8 +1006,11 @@ function switchTab(name) {
 
 // ── Food tracking ─────────────────────────────────────────────
 let selectedPhotoData = null;
+let editingFoodId = null;
+let editingFoodHasPhoto = false;
+let foodEntriesMap = {};
 
-document.getElementById('food-date').value = yesterday;
+document.getElementById('food-date').value = today;
 
 // Kalorienziel laden
 async function loadZiel() {
@@ -1079,28 +1087,83 @@ async function analyzeText() {
 
 async function submitFood() {
   const btn = document.getElementById('food-submit-btn');
+  const wasEditing = editingFoodId;
   btn.disabled = true; btn.textContent = '…';
   const n = id => { const v = document.getElementById(id).value; return v ? parseInt(v) : null; };
+  const origEntry = wasEditing ? foodEntriesMap[wasEditing] : null;
   const payload = {
-    datum: document.getElementById('food-date').value,
-    uhrzeit: new Date().toTimeString().slice(0,5),
+    datum:        document.getElementById('food-date').value,
+    uhrzeit:      origEntry ? origEntry.uhrzeit : new Date().toTimeString().slice(0,5),
     beschreibung: document.getElementById('food-desc').value.trim(),
-    kcal: n('food-kcal'), kohlenhydrate: n('food-kh'),
-    fett: n('food-fett'), protein: n('food-pro'),
-    foto: selectedPhotoData || null
+    kcal:         n('food-kcal'), kohlenhydrate: n('food-kh'),
+    fett:         n('food-fett'), protein:       n('food-pro'),
   };
+  if (selectedPhotoData) {
+    payload.foto = selectedPhotoData;     // neues Foto
+  } else if (!wasEditing) {
+    payload.foto = null;                  // neuer Eintrag ohne Foto
+  }
+  // beim Bearbeiten ohne neues Foto: kein foto-Schlüssel → Server behält bestehendes Foto
   try {
-    const res = await fetch('/food', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    let res;
+    if (wasEditing) {
+      res = await fetch(`/food-entry/${wasEditing}`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      });
+    } else {
+      res = await fetch('/food', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      });
+    }
     const data = await res.json();
     if (data.ok) {
-      showToast('✓ Mahlzeit gespeichert!');
-      ['food-desc','food-kcal','food-kh','food-fett','food-pro'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('food-photo-input').value = '';
-      document.getElementById('photo-preview').style.display = 'none';
-      selectedPhotoData = null; checkFoodReady(); loadFood();
+      showToast(wasEditing ? '✓ Mahlzeit aktualisiert!' : '✓ Mahlzeit gespeichert!');
+      cancelFoodEdit();
+      loadFood();
     } else showToast('⚠ ' + data.error, true);
   } catch(e) { console.error('submitFood Fehler:', e); showToast('⚠ Verbindungsfehler', true); }
-  btn.textContent = 'Speichern'; checkFoodReady();
+  btn.textContent = editingFoodId ? 'Aktualisieren' : 'Speichern';
+  checkFoodReady();
+}
+
+function cancelFoodEdit() {
+  editingFoodId = null;
+  editingFoodHasPhoto = false;
+  ['food-desc','food-kcal','food-kh','food-fett','food-pro'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('food-photo-input').value = '';
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-preview-img').src = '';
+  document.getElementById('food-date').value = today;
+  document.getElementById('food-submit-btn').textContent = 'Speichern';
+  document.getElementById('food-cancel-btn').style.display = 'none';
+  selectedPhotoData = null;
+  checkFoodReady();
+}
+
+function startFoodEdit(id) {
+  const e = foodEntriesMap[id];
+  if (!e) return;
+  editingFoodId = id;
+  editingFoodHasPhoto = !!e.foto;
+  document.getElementById('food-desc').value = e.beschreibung || '';
+  document.getElementById('food-kcal').value = e.kcal  || '';
+  document.getElementById('food-kh').value   = e.kohlenhydrate || '';
+  document.getElementById('food-fett').value = e.fett  || '';
+  document.getElementById('food-pro').value  = e.protein || '';
+  // Datum DD.MM.YYYY → YYYY-MM-DD
+  const [d,m,y] = e.datum.split('.');
+  document.getElementById('food-date').value = `${y}-${m}-${d}`;
+  // Bestehendes Foto anzeigen
+  if (e.foto) {
+    document.getElementById('photo-preview-img').src = `/food-photo/${e.foto}`;
+    document.getElementById('photo-preview').style.display = 'flex';
+  }
+  selectedPhotoData = null;
+  document.getElementById('food-submit-btn').textContent = 'Aktualisieren';
+  document.getElementById('food-submit-btn').disabled = false;
+  document.getElementById('food-cancel-btn').style.display = '';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  checkFoodReady();
 }
 
 async function deleteFoodEntry(id) {
@@ -1120,6 +1183,9 @@ async function loadFood() {
   if (!fData.entries || fData.entries.length === 0) {
     list.innerHTML = '<div class="empty">Noch keine Einträge</div>'; return;
   }
+  // Einträge in Map für späteres Bearbeiten speichern
+  foodEntriesMap = {};
+  fData.entries.forEach(e => { foodEntriesMap[e.id] = e; });
   // Gruppe nach Tag (neueste zuerst)
   const grouped = {};
   [...fData.entries].reverse().forEach(e => {
@@ -1154,6 +1220,7 @@ async function loadFood() {
           <span class="food-meta">${e.uhrzeit}</span>
           <span style="display:flex;align-items:center;gap:4px">
             ${e.kcal ? `<span class="kcal-badge">🔥 ${e.kcal} kcal</span>` : ''}
+            <button class="btn-icon" onclick="startFoodEdit('${e.id}')" title="Bearbeiten">✏️</button>
             <button class="btn-icon btn-del" onclick="deleteFoodEntry('${e.id}')" title="Löschen">🗑</button>
           </span>
         </div>
@@ -1537,6 +1604,38 @@ def get_food():
         return jsonify({"entries": [dict(r) for r in rows]})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/food-entry/<entry_id>", methods=["PUT"])
+def update_food(entry_id):
+    try:
+        data = request.get_json()
+        datum_raw = data.get("datum", "")
+        try:
+            entry_date = datetime.strptime(datum_raw, "%Y-%m-%d").date() if datum_raw else date.today()
+        except Exception:
+            entry_date = date.today()
+        datum = entry_date.strftime("%d.%m.%Y")
+        conn = get_db()
+        if "foto" in data:
+            conn.execute(
+                "UPDATE food_log SET datum=?,uhrzeit=?,beschreibung=?,kcal=?,kohlenhydrate=?,fett=?,protein=?,foto=? WHERE id=?",
+                (datum, data.get("uhrzeit",""), data.get("beschreibung",""),
+                 data.get("kcal"), data.get("kohlenhydrate"), data.get("fett"), data.get("protein"),
+                 data.get("foto"), entry_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE food_log SET datum=?,uhrzeit=?,beschreibung=?,kcal=?,kohlenhydrate=?,fett=?,protein=? WHERE id=?",
+                (datum, data.get("uhrzeit",""), data.get("beschreibung",""),
+                 data.get("kcal"), data.get("kohlenhydrate"), data.get("fett"), data.get("protein"),
+                 entry_id)
+            )
+        conn.commit()
+        conn.close()
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/food-entry/<entry_id>", methods=["DELETE"])
