@@ -86,35 +86,35 @@ LOGIN_HTML = """<!DOCTYPE html>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #f5f4f0; min-height: 100vh;
+    background: #f5f5f7; min-height: 100vh;
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }
   .card {
-    background: #fff; border: 1px solid #e8e5de;
-    border-radius: 20px; box-shadow: 0 2px 24px rgba(0,0,0,0.08);
+    background: #fff; border: 1px solid #e4e4e7;
+    border-radius: 14px; box-shadow: 0 1px 16px rgba(0,0,0,0.07);
     padding: 40px 36px; width: 100%; max-width: 360px; text-align: center;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 6px; }
-  p  { color: #888; font-size: 0.9rem; margin-bottom: 28px; }
+  h1 { font-size: 1.4rem; margin-bottom: 6px; font-weight: 700; }
+  p  { color: #8e8e93; font-size: 0.9rem; margin-bottom: 28px; }
   input {
-    width: 100%; border: 1.5px solid #e8e5de; border-radius: 12px;
+    width: 100%; border: 1.5px solid #e4e4e7; border-radius: 10px;
     padding: 14px 16px; font-size: 1rem; font-family: inherit;
-    background: #fafaf8; outline: none; margin-bottom: 14px;
+    background: #fafafa; outline: none; margin-bottom: 14px;
     transition: border-color 0.15s;
   }
-  input:focus { border-color: #4a7c59; background: #fff; }
+  input:focus { border-color: #3a6b4a; background: #fff; }
   button {
-    width: 100%; background: #4a7c59; color: #fff; border: none;
-    border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: 600;
+    width: 100%; background: #1a1a1a; color: #fff; border: none;
+    border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: 600;
     cursor: pointer; transition: background 0.15s;
   }
-  button:hover { background: #3a6449; }
+  button:hover { background: #333; }
   .err { color: #c0392b; font-size: 0.85rem; margin-top: 10px; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>📓 Mein Tagebuch</h1>
+  <h1>Mein Tagebuch</h1>
   <p>Bitte Passwort eingeben</p>
   <form method="post">
     <input type="password" name="password" placeholder="Passwort" autofocus>
@@ -159,18 +159,18 @@ HTML = """<!DOCTYPE html>
 <title>📓 Mein Tagebuch</title>
 <style>
   :root {
-    --bg: #f5f4f0;
+    --bg: #f5f5f7;
     --card: #ffffff;
-    --border: #e8e5de;
-    --text: #2c2c2c;
-    --muted: #888;
-    --accent: #4a7c59;
-    --accent-light: #edf4ef;
-    --gold: #e8a020;
-    --gold-hover: #f5c040;
-    --gold-dim: #d8cbb8;
-    --radius: 16px;
-    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+    --border: #e4e4e7;
+    --text: #1a1a1a;
+    --muted: #8e8e93;
+    --accent: #3a6b4a;
+    --accent-light: #eef4f0;
+    --gold: #d4920a;
+    --gold-hover: #e8a820;
+    --gold-dim: #d8d8dc;
+    --radius: 12px;
+    --shadow: 0 1px 8px rgba(0,0,0,0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -183,9 +183,9 @@ HTML = """<!DOCTYPE html>
   .wrap { max-width: 560px; margin: 0 auto; }
 
   /* Header */
-  .header { text-align: center; margin-bottom: 28px; }
-  .header h1 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
-  .header p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .header { text-align: left; margin-bottom: 28px; padding: 0 2px; }
+  .header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.025em; color: var(--text); }
+  .header p { color: var(--muted); font-size: 0.85rem; margin-top: 3px; }
 
   /* Card */
   .card {
@@ -218,19 +218,17 @@ HTML = """<!DOCTYPE html>
   }
   .stars {
     display: flex;
-    gap: 6px;
+    gap: 4px;
   }
   .star {
-    font-size: 2.2rem;
+    font-size: 1.75rem;
     cursor: pointer;
     color: var(--gold-dim);
-    transition: color 0.12s, transform 0.1s;
+    transition: color 0.12s;
     user-select: none;
     line-height: 1;
   }
   .star:hover, .star.active { color: var(--gold); }
-  .star:hover { transform: scale(1.15); }
-  .star.active { transform: scale(1.05); }
 
   /* Note */
   .note-wrap { margin-top: 24px; }
@@ -251,7 +249,7 @@ HTML = """<!DOCTYPE html>
     font-size: 0.95rem;
     font-family: inherit;
     color: var(--text);
-    background: #fafaf8;
+    background: #fafafa;
     resize: none;
     transition: border-color 0.15s;
     outline: none;
@@ -282,7 +280,7 @@ HTML = """<!DOCTYPE html>
     font-size: 0.9rem;
     font-family: inherit;
     color: var(--text);
-    background: #fafaf8;
+    background: #fafafa;
     outline: none;
     transition: border-color 0.15s;
   }
@@ -291,11 +289,11 @@ HTML = """<!DOCTYPE html>
   /* Toast */
   #toast {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
-    background: var(--accent); color: #fff;
-    padding: 12px 22px; border-radius: 50px;
-    font-weight: 600; font-size: 0.9rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    background: #1a1a1a; color: #fff;
+    padding: 10px 20px; border-radius: 8px;
+    font-weight: 500; font-size: 0.88rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    transition: transform 0.25s ease;
     z-index: 999;
     white-space: nowrap;
   }
@@ -317,7 +315,7 @@ HTML = """<!DOCTYPE html>
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    background: #fafaf8;
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     font-size: 0.88rem;
@@ -329,9 +327,9 @@ HTML = """<!DOCTYPE html>
   .mini-stars { color: var(--gold); letter-spacing: -1px; font-size: 0.85rem; }
   .mini-stars .dim { color: var(--gold-dim); }
   .entry-avg {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--text);
     text-align: right;
   }
   .entry-location {
@@ -371,7 +369,7 @@ HTML = """<!DOCTYPE html>
     position: absolute; bottom: 0; left: 0; right: 0;
     background: var(--accent);
     border-radius: 4px 4px 0 0;
-    transition: height 0.4s cubic-bezier(0.34,1.2,0.64,1);
+    transition: height 0.35s ease;
   }
   .trend-label { text-align: center; font-size: 0.65rem; color: var(--muted); margin-top: 4px; }
   .trend-wrap { margin-top: 14px; }
@@ -406,12 +404,12 @@ HTML = """<!DOCTYPE html>
   /* Tabs */
   .tabs {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     margin-bottom: 24px;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 5px;
+    border-radius: 10px;
+    padding: 4px;
     box-shadow: var(--shadow);
   }
   .tab-btn {
@@ -419,22 +417,23 @@ HTML = """<!DOCTYPE html>
     background: none;
     color: var(--muted);
     border: none;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 0.9rem;
+    border-radius: 7px;
+    padding: 9px 6px;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
+    letter-spacing: 0.01em;
   }
   .tab-btn:hover { background: var(--bg); color: var(--text); }
-  .tab-btn.active { background: var(--accent); color: #fff; }
+  .tab-btn.active { background: var(--text); color: #fff; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
   /* Food entries */
   .food-entry {
     padding: 14px 16px;
-    background: #fafaf8;
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
     margin-bottom: 10px;
@@ -446,12 +445,13 @@ HTML = """<!DOCTYPE html>
     margin-bottom: 8px;
   }
   .food-tag {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: var(--accent-light);
-    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--border);
   }
   .food-meta { font-size: 0.78rem; color: var(--muted); }
   .food-desc { font-size: 0.88rem; color: var(--text); margin-top: 4px; line-height: 1.4; }
@@ -483,24 +483,26 @@ HTML = """<!DOCTYPE html>
   .photo-preview img { max-width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; }
   .kcal-badge {
     display: inline-block;
-    background: #fff3e0;
-    color: #e67e22;
-    font-size: 0.78rem;
-    font-weight: 700;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 0.76rem;
+    font-weight: 600;
     padding: 2px 8px;
-    border-radius: 20px;
+    border-radius: 6px;
     margin-left: 6px;
+    border: 1px solid var(--border);
   }
   .macro-row {
     display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;
   }
   .macro-badge {
-    font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
-    border-radius: 20px;
+    font-size: 0.71rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted);
   }
-  .macro-kh  { background:#e8f4fb; color:#2980b9; }
-  .macro-fat { background:#fdf0e8; color:#c0392b; }
-  .macro-pro { background:#eafaf1; color:#27ae60; }
+  .macro-kh  { background: var(--bg); color: var(--muted); }
+  .macro-fat { background: var(--bg); color: var(--muted); }
+  .macro-pro { background: var(--bg); color: var(--muted); }
   .day-group { margin-bottom: 16px; }
   .day-header {
     padding: 10px 14px;
@@ -514,7 +516,7 @@ HTML = """<!DOCTYPE html>
     margin-bottom: 6px;
   }
   .day-title { font-weight: 700; font-size: 0.88rem; }
-  .day-kcal { font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+  .day-kcal { font-size: 0.85rem; font-weight: 700; color: var(--text); }
   .progress-wrap {
     height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
   }
@@ -575,10 +577,12 @@ HTML = """<!DOCTYPE html>
   }
   .day-card-date {
     padding: 10px 16px;
-    background: var(--accent);
-    color: white;
+    background: var(--bg);
+    color: var(--text);
     font-weight: 700;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.02em;
   }
   .day-tagebuch {
     padding: 14px 16px;
@@ -619,7 +623,7 @@ HTML = """<!DOCTYPE html>
     gap: 8px;
   }
   .essen-item-time { color: var(--muted); font-size: 0.75rem; min-width: 36px; }
-  .essen-item-kcal { color: #e67e22; font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
+  .essen-item-kcal { color: var(--muted); font-weight: 600; font-size: 0.78rem; white-space: nowrap; }
   .no-entry { font-size: 0.8rem; color: var(--muted); padding: 6px 0; font-style: italic; }
 </style>
 </head>
@@ -628,15 +632,15 @@ HTML = """<!DOCTYPE html>
 <div class="wrap">
 
   <div class="header">
-    <h1>📓 Mein Tagebuch</h1>
+    <h1>Mein Tagebuch</h1>
     <p id="header-subtitle">Wie geht es dir heute?</p>
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('tagebuch')">📓 Tagebuch</button>
-    <button class="tab-btn" onclick="switchTab('essen')">🍽️ Essen</button>
-    <button class="tab-btn" onclick="switchTab('uebersicht')">📊 Übersicht</button>
-    <button class="tab-btn" onclick="switchTab('statistik')">📈 Statistik</button>
+    <button class="tab-btn active" onclick="switchTab('tagebuch')">Tagebuch</button>
+    <button class="tab-btn" onclick="switchTab('essen')">Essen</button>
+    <button class="tab-btn" onclick="switchTab('uebersicht')">Übersicht</button>
+    <button class="tab-btn" onclick="switchTab('statistik')">Statistik</button>
   </div>
 
   <!-- ══ TAB: TAGEBUCH ══ -->
