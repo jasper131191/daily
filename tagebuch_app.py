@@ -1135,15 +1135,28 @@ let foodEntriesMap = {};
 
 document.getElementById('food-date').value = today;
 
-// Ziele laden
+// Ziele laden (mit sinnvollen Startwerten für 130 kg / 2100 kcal)
 async function loadZiel() {
   try {
     const res = await fetch('/settings');
     const data = await res.json();
-    if (data.kcal_ziel)  document.getElementById('kcal-ziel').value  = data.kcal_ziel;
-    if (data.kh_ziel)    document.getElementById('kh-ziel').value    = data.kh_ziel;
-    if (data.fett_ziel)  document.getElementById('fett-ziel').value  = data.fett_ziel;
-    if (data.pro_ziel)   document.getElementById('pro-ziel').value   = data.pro_ziel;
+    const defaults = { kcal_ziel: 2100, kh_ziel: 200, fett_ziel: 70, pro_ziel: 160 };
+    // Fehlende Werte mit Defaults belegen und direkt speichern
+    const toSave = {};
+    for (const [k, v] of Object.entries(defaults)) {
+      if (data[k] == null) toSave[k] = v;
+    }
+    if (Object.keys(toSave).length) {
+      await fetch('/settings', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(toSave)
+      });
+      Object.assign(data, toSave);
+    }
+    document.getElementById('kcal-ziel').value = data.kcal_ziel;
+    document.getElementById('kh-ziel').value   = data.kh_ziel;
+    document.getElementById('fett-ziel').value = data.fett_ziel;
+    document.getElementById('pro-ziel').value  = data.pro_ziel;
   } catch(e) {}
 }
 async function saveSetting(key, val) {
