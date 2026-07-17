@@ -496,7 +496,6 @@ HTML = """<!DOCTYPE html>
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 6px;
-    margin-left: 6px;
     border: 1px solid var(--border);
   }
   .macro-row {
