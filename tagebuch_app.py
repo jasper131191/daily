@@ -860,13 +860,7 @@ HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Food list -->
-  <div class="card">
-    <div class="section-title">Letzte Einträge</div>
-    <div id="food-list">
-      <div class="empty">Lädt…</div>
-    </div>
-  </div>
+  <div id="food-list" style="display:none"></div>
 
   </div><!-- end tab-eingabe -->
 
