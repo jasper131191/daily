@@ -432,17 +432,24 @@ HTML = """<!DOCTYPE html>
 
   /* Food entries */
   .food-entry {
-    padding: 14px 16px;
+    padding: 10px 12px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
-  .food-entry-header {
+  .food-entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .food-entry-bottom {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 3px;
+    margin-top: 6px;
   }
   .food-tag {
     font-size: 0.72rem;
@@ -1377,16 +1384,18 @@ async function loadFood() {
       const mFett = e.fett   ? `<span class="macro-badge macro-fat">Fett ${e.fett}g</span>` : '';
       const mPro  = e.protein? `<span class="macro-badge macro-pro">Protein ${e.protein}g</span>` : '';
       return `<div class="food-entry">
-        <div class="food-entry-header">
-          <span class="food-meta">${e.uhrzeit}</span>
-          <span style="display:flex;align-items:center;gap:4px">
-            ${e.kcal ? `<span class="kcal-badge">🔥 ${e.kcal} kcal</span>` : ''}
+        <div class="food-entry-top">
+          <div class="food-desc" style="flex:1">${e.beschreibung || '—'}</div>
+          <span style="display:flex;align-items:center;gap:2px;flex-shrink:0">
             <button class="btn-icon" onclick="startFoodEdit('${e.id}')" title="Bearbeiten">✏️</button>
             <button class="btn-icon btn-del" onclick="deleteFoodEntry('${e.id}')" title="Löschen">🗑</button>
           </span>
         </div>
-        ${e.beschreibung ? `<div class="food-desc">${e.beschreibung}</div>` : ''}
         ${(mKh||mFett||mPro) ? `<div class="macro-row">${mKh}${mFett}${mPro}</div>` : ''}
+        <div class="food-entry-bottom">
+          ${e.kcal ? `<span class="kcal-badge">🔥 ${e.kcal} kcal</span>` : '<span></span>'}
+          <span class="food-meta">${e.uhrzeit}</span>
+        </div>
         ${e.foto ? `<div class="food-photo"><img src="/food-photo/${e.foto}" loading="lazy" onclick="window.open(this.src)"></div>` : ''}
       </div>`;
     }).join('');
