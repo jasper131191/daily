@@ -1337,7 +1337,7 @@ async function loadFood() {
     const r = 17, cx = 22, cy = 22, size = 44;
     const circ = +(2 * Math.PI * r).toFixed(2);
     const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
-    const strokeColor = pct < 50 ? '#c0392b' : pct < 80 ? '#d4920a' : 'var(--accent)';
+    const strokeColor = pct >= 100 ? '#c0392b' : pct >= 80 ? 'var(--accent)' : pct >= 50 ? '#d4920a' : '#c0392b';
     const offset = +(circ - (pct / 100) * circ).toFixed(2);
     const ringHtml = goal
       ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3.5"/>
