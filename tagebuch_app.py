@@ -155,8 +155,10 @@ HTML = """<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📓 Mein Tagebuch</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Daily</title>
 <style>
   :root {
     --bg: #f5f5f7;
@@ -173,14 +175,23 @@ HTML = """<!DOCTYPE html>
     --shadow: 0 1px 8px rgba(0,0,0,0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { overflow-x: hidden; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 32px 16px;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    padding: 20px 16px env(safe-area-inset-bottom, 16px);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-top: max(20px, env(safe-area-inset-top));
   }
-  .wrap { max-width: 560px; margin: 0 auto; }
+  .wrap { max-width: 560px; margin: 0 auto; width: 100%; }
+  /* Text overflow prevention */
+  p, span, div, label, textarea { overflow-wrap: break-word; word-break: break-word; }
+  img { max-width: 100%; height: auto; }
 
   /* Header */
   .header { text-align: left; margin-bottom: 28px; padding: 0 2px; }
@@ -193,8 +204,9 @@ HTML = """<!DOCTYPE html>
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
-    padding: 28px;
-    margin-bottom: 20px;
+    padding: 20px;
+    margin-bottom: 16px;
+    min-width: 0;
   }
 
   /* Star rows */
@@ -564,7 +576,7 @@ HTML = """<!DOCTYPE html>
   .macro-cell-goal  { font-size: 0.64rem; color: var(--muted); font-weight: 400; }
   .macro-cell-bar   { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
   .macro-cell-fill  { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
-  .macro-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .macro-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; min-width: 0; }
   .analyzing {
     display: none;
     align-items: center;
