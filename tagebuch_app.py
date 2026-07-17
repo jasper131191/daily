@@ -659,10 +659,6 @@ HTML = """<!DOCTYPE html>
 <div id="toast">✓ Eintrag gespeichert!</div>
 <div class="wrap">
 
-  <div class="header">
-    <h1>Daily</h1>
-  </div>
-
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('eingabe')">Eingabe</button>
     <button class="tab-btn" onclick="switchTab('uebersicht')">Verlauf</button>
