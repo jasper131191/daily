@@ -442,7 +442,7 @@ HTML = """<!DOCTYPE html>
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 3px;
   }
   .food-tag {
     font-size: 0.72rem;
@@ -550,10 +550,14 @@ HTML = """<!DOCTYPE html>
   }
   .ziel-input:focus { border-color: var(--accent); background: #fff; }
   .ziel-unit { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-  /* Macro circles in day-header */
-  .macro-circles { display: flex; gap: 16px; margin-top: 10px; }
-  .macro-circle-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .macro-circle-label { font-size: 0.67rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  /* Macro cells in day-header */
+  .macro-cells { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .macro-cell { background: var(--bg); border-radius: 8px; padding: 7px 10px 6px; }
+  .macro-cell-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 2px; }
+  .macro-cell-value { font-size: 0.78rem; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+  .macro-cell-goal  { font-size: 0.64rem; color: var(--muted); font-weight: 400; }
+  .macro-cell-bar   { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .macro-cell-fill  { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
   .macro-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
   .analyzing {
     display: none;
@@ -1331,29 +1335,21 @@ async function loadFood() {
     if (!grouped[e.datum]) grouped[e.datum] = [];
     grouped[e.datum].push(e);
   });
-  // Helper: Kreis-Fortschrittsanzeige für ein Makro
-  function macroCircle(label, val, goal) {
+  // Helper: Kachel-Fortschrittsanzeige für ein Makro
+  function macroCell(label, val, goal) {
     if (!val && !goal) return '';
-    const r = 17, cx = 22, cy = 22, size = 44;
-    const circ = +(2 * Math.PI * r).toFixed(2);
     const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
-    const strokeColor = pct >= 100 ? '#c0392b' : pct >= 80 ? 'var(--accent)' : pct >= 50 ? '#d4920a' : '#c0392b';
-    const offset = +(circ - (pct / 100) * circ).toFixed(2);
-    const ringHtml = goal
-      ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3.5"/>
-         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${strokeColor}" stroke-width="3.5"
-           stroke-dasharray="${circ} ${circ}" stroke-dashoffset="${offset}"
-           stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>`
-      : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3.5"/>`;
-    const valLine  = val  ? `${val}g`  : '–';
-    const pctLine  = goal ? `${pct}%`  : '';
-    return `<div class="macro-circle-item">
-      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="overflow:visible">
-        ${ringHtml}
-        <text x="${cx}" y="${pctLine ? cy - 3 : cy + 3}" text-anchor="middle" font-size="8.5" font-weight="700" fill="var(--text)">${valLine}</text>
-        ${pctLine ? `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="7.5" fill="var(--muted)">${pctLine}</text>` : ''}
-      </svg>
-      <div class="macro-circle-label">${label}</div>
+    const color = pct >= 100 ? '#c0392b' : pct >= 80 ? 'var(--accent)' : pct >= 50 ? '#d4920a' : '#c0392b';
+    const valHtml = goal
+      ? `<div class="macro-cell-value">${val}g <span class="macro-cell-goal">/ ${goal}g</span></div>`
+      : `<div class="macro-cell-value">${val}g</div>`;
+    const barHtml = goal
+      ? `<div class="macro-cell-bar"><div class="macro-cell-fill" style="width:${pct}%;background:${color}"></div></div>`
+      : '';
+    return `<div class="macro-cell">
+      <div class="macro-cell-label">${label}</div>
+      ${valHtml}
+      ${barHtml}
     </div>`;
   }
   list.innerHTML = Object.entries(grouped).map(([datum, entries]) => {
@@ -1371,10 +1367,10 @@ async function loadFood() {
     ` : (totalKcal ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:4px">${totalKcal} kcal</div>` : '');
     const hasMacros = totalKh || totalFett || totalPro;
     const macroHtml = hasMacros ? `
-      <div class="macro-circles">
-        ${macroCircle('KH', totalKh, khZiel)}
-        ${macroCircle('Fett', totalFett, fettZiel)}
-        ${macroCircle('Protein', totalPro, proZiel)}
+      <div class="macro-cells">
+        ${macroCell('KH', totalKh, khZiel)}
+        ${macroCell('Fett', totalFett, fettZiel)}
+        ${macroCell('Protein', totalPro, proZiel)}
       </div>` : '';
     const entriesHtml = entries.map(e => {
       const mKh   = e.kohlenhydrate ? `<span class="macro-badge macro-kh">KH ${e.kohlenhydrate}g</span>` : '';
