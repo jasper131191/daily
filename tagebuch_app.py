@@ -550,13 +550,10 @@ HTML = """<!DOCTYPE html>
   }
   .ziel-input:focus { border-color: var(--accent); background: #fff; }
   .ziel-unit { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
-  /* Macro progress in day-header */
-  .macro-progress { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
-  .macro-progress-row { display: flex; align-items: center; gap: 8px; }
-  .macro-progress-label { font-size: 0.69rem; color: var(--muted); font-weight: 600; width: 50px; }
-  .macro-progress-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .macro-progress-bar-fill { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
-  .macro-progress-text { font-size: 0.69rem; color: var(--muted); white-space: nowrap; min-width: 80px; text-align: right; }
+  /* Macro circles in day-header */
+  .macro-circles { display: flex; gap: 16px; margin-top: 10px; }
+  .macro-circle-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .macro-circle-label { font-size: 0.67rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
   .macro-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
   .analyzing {
     display: none;
@@ -1334,19 +1331,29 @@ async function loadFood() {
     if (!grouped[e.datum]) grouped[e.datum] = [];
     grouped[e.datum].push(e);
   });
-  // Helper: eine Macro-Zeile mit Progressbar
-  function macroProgRow(label, val, goal, color) {
+  // Helper: Kreis-Fortschrittsanzeige für ein Makro
+  function macroCircle(label, val, goal) {
     if (!val && !goal) return '';
+    const r = 17, cx = 22, cy = 22, size = 44;
+    const circ = +(2 * Math.PI * r).toFixed(2);
     const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
-    const fillColor = goal && pct >= 100 ? '#c0392b' : color;
-    const barHtml = goal
-      ? `<div class="macro-progress-bar-wrap"><div class="macro-progress-bar-fill" style="width:${pct}%;background:${fillColor}"></div></div>`
-      : `<div class="macro-progress-bar-wrap"></div>`;
-    const text = goal ? `${val} / ${goal}g` : `${val}g`;
-    return `<div class="macro-progress-row">
-      <span class="macro-progress-label">${label}</span>
-      ${barHtml}
-      <span class="macro-progress-text">${text}</span>
+    const strokeColor = pct >= 100 ? '#c0392b' : pct >= 80 ? '#d4920a' : 'var(--accent)';
+    const offset = +(circ - (pct / 100) * circ).toFixed(2);
+    const ringHtml = goal
+      ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3.5"/>
+         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${strokeColor}" stroke-width="3.5"
+           stroke-dasharray="${circ} ${circ}" stroke-dashoffset="${offset}"
+           stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>`
+      : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="3.5"/>`;
+    const valLine  = val  ? `${val}g`  : '–';
+    const pctLine  = goal ? `${pct}%`  : '';
+    return `<div class="macro-circle-item">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="overflow:visible">
+        ${ringHtml}
+        <text x="${cx}" y="${pctLine ? cy - 3 : cy + 3}" text-anchor="middle" font-size="8.5" font-weight="700" fill="var(--text)">${valLine}</text>
+        ${pctLine ? `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="7.5" fill="var(--muted)">${pctLine}</text>` : ''}
+      </svg>
+      <div class="macro-circle-label">${label}</div>
     </div>`;
   }
   list.innerHTML = Object.entries(grouped).map(([datum, entries]) => {
@@ -1364,10 +1371,10 @@ async function loadFood() {
     ` : (totalKcal ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:4px">${totalKcal} kcal</div>` : '');
     const hasMacros = totalKh || totalFett || totalPro;
     const macroHtml = hasMacros ? `
-      <div class="macro-progress" style="margin-top:${ziel || totalKcal ? '8px' : '6px'}">
-        ${macroProgRow('KH', totalKh, khZiel, '#555')}
-        ${macroProgRow('Fett', totalFett, fettZiel, '#555')}
-        ${macroProgRow('Protein', totalPro, proZiel, '#555')}
+      <div class="macro-circles">
+        ${macroCircle('KH', totalKh, khZiel)}
+        ${macroCircle('Fett', totalFett, fettZiel)}
+        ${macroCircle('Protein', totalPro, proZiel)}
       </div>` : '';
     const entriesHtml = entries.map(e => {
       const mKh   = e.kohlenhydrate ? `<span class="macro-badge macro-kh">KH ${e.kohlenhydrate}g</span>` : '';
