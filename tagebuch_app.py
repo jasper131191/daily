@@ -665,17 +665,85 @@ HTML = """<!DOCTYPE html>
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('tagebuch')">Tagebuch</button>
-    <button class="tab-btn" onclick="switchTab('essen')">Essen</button>
+    <button class="tab-btn active" onclick="switchTab('eingabe')">Eingabe</button>
     <button class="tab-btn" onclick="switchTab('uebersicht')">Übersicht</button>
     <button class="tab-btn" onclick="switchTab('statistik')">Statistik</button>
   </div>
 
-  <!-- ══ TAB: TAGEBUCH ══ -->
-  <div id="tab-tagebuch" class="tab-content active">
+  <!-- ══ TAB: EINGABE ══ -->
+  <div id="tab-eingabe" class="tab-content active">
 
-  <!-- Entry card -->
+  <!-- 1. Was hast du gegessen? -->
   <div class="card">
+    <div class="section-title" style="margin-bottom:14px">Was hast du gegessen?</div>
+
+    <label class="upload-btn" for="food-photo-input">
+      📷 Foto aufnehmen oder auswählen
+      <input type="file" id="food-photo-input" accept="image/*" capture="environment"
+             style="display:none" onchange="previewPhoto(this)">
+    </label>
+
+    <div class="analyzing" id="analyzing-indicator">
+      <span>🔍</span> Erkenne Mahlzeit und schätze Kalorien…
+    </div>
+
+    <div class="photo-preview" id="photo-preview">
+      <img id="photo-preview-img" src="" alt="Vorschau">
+    </div>
+
+    <div class="note-wrap" style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <label style="margin-bottom:0">Beschreibung</label>
+        <button onclick="analyzeText()" id="estimate-btn"
+          style="background:var(--accent-light);color:var(--accent);border:none;border-radius:8px;
+                 padding:4px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
+          🔥 Kalorien schätzen
+        </button>
+      </div>
+      <textarea id="food-desc" rows="2" placeholder="Wird automatisch erkannt, oder selbst eingeben…"></textarea>
+    </div>
+
+    <div style="margin-top:10px">
+      <label style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);display:block;margin-bottom:6px">Kalorien (kcal)</label>
+      <input type="number" id="food-kcal" min="0" placeholder="wird geschätzt…"
+        style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;
+               font-size:0.95rem;font-family:inherit;background:#fafafa;outline:none;color:var(--text)">
+    </div>
+    <div class="macro-inputs">
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">KH (g)</label>
+        <input type="number" id="food-kh" min="0" placeholder="—"
+          style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;
+                 font-size:0.9rem;font-family:inherit;background:#fafafa;outline:none;color:var(--text)">
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Fett (g)</label>
+        <input type="number" id="food-fett" min="0" placeholder="—"
+          style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;
+                 font-size:0.9rem;font-family:inherit;background:#fafafa;outline:none;color:var(--text)">
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Protein (g)</label>
+        <input type="number" id="food-pro" min="0" placeholder="—"
+          style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;
+                 font-size:0.9rem;font-family:inherit;background:#fafafa;outline:none;color:var(--text)">
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:16px">
+      <button id="food-submit-btn" onclick="submitFood()" disabled>Speichern</button>
+      <button id="food-cancel-btn" onclick="cancelFoodEdit()"
+        style="display:none;background:var(--bg);color:var(--muted);border:1.5px solid var(--border);
+               border-radius:10px;padding:12px 20px;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit">
+        Abbrechen
+      </button>
+      <input type="date" id="food-date" class="date-input">
+    </div>
+  </div>
+
+  <!-- 2. Tagebuch -->
+  <div class="card">
+    <div class="section-title" style="margin-bottom:16px">Tagebuch</div>
     <div class="category">
       <div class="cat-label"><span class="dot" style="background:#3498db"></span>Stimmung</div>
       <div class="stars" id="stars-0">
@@ -720,7 +788,7 @@ HTML = """<!DOCTYPE html>
       <div style="display:flex;gap:8px;align-items:center">
         <input id="ort" type="text" placeholder="Wird automatisch erkannt…"
           style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;
-                 font-size:0.95rem;font-family:inherit;background:#fafaf8;outline:none;
+                 font-size:0.95rem;font-family:inherit;background:#fafafa;outline:none;
                  transition:border-color 0.15s;color:var(--text)">
         <button onclick="detectLocation()" title="Neu ermitteln"
           style="background:var(--accent-light);color:var(--accent);border:none;
@@ -737,41 +805,23 @@ HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- History card -->
-  <div class="card">
-    <div class="section-title">Letzte Einträge</div>
-    <div id="entry-list" class="entry-list">
-      <div class="empty">Lädt…</div>
-    </div>
-
-    <div class="trend-wrap" id="trend-wrap" style="display:none">
-      <div class="section-title">Verlauf Ø (letzte 14 Tage)</div>
-      <div class="trend-row" id="trend-bars"></div>
-      <div id="trend-labels" style="display:flex;gap:4px;"></div>
-    </div>
-  </div>
-
-  </div><!-- end tab-tagebuch -->
-
-  <!-- ══ TAB: ESSEN ══ -->
-  <div id="tab-essen" class="tab-content">
-
-  <div class="card" style="margin-bottom:12px;padding:14px 18px">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <span style="font-size:1.1rem">⚖️</span>
-      <span style="font-size:0.9rem;font-weight:600;color:var(--text)">Gewicht heute</span>
-      <input type="number" id="gewicht-input" step="0.1" min="20" max="300" placeholder="— kg"
-        style="width:90px;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;
-               font-size:0.95rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
+  <!-- 3. Gewicht heute -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="section-title" style="margin-bottom:12px">Gewicht heute</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="number" id="gewicht-input" step="0.1" min="20" max="300" placeholder="kg"
+        style="width:100px;border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;
+               font-size:1rem;font-family:inherit;background:#fafafa;outline:none;color:var(--text)">
       <button onclick="saveGewicht()"
-        style="background:var(--accent-light);color:var(--accent);border:none;border-radius:8px;
-               padding:7px 14px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit">
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+               padding:9px 18px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit">
         Speichern
       </button>
       <span id="gewicht-status" style="font-size:0.8rem;color:var(--muted)"></span>
     </div>
   </div>
 
+  <!-- 4. Tagesziele -->
   <div class="ziel-wrap">
     <div class="ziel-wrap-title">Tagesziele</div>
     <div class="ziel-grid">
@@ -810,73 +860,7 @@ HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  <div class="card">
-    <div class="section-title" style="margin-bottom:16px">Was hast du gegessen?</div>
-
-    <label class="upload-btn" for="food-photo-input">
-      📷 Foto aufnehmen oder auswählen
-      <input type="file" id="food-photo-input" accept="image/*" capture="environment"
-             style="display:none" onchange="previewPhoto(this)">
-    </label>
-
-    <div class="analyzing" id="analyzing-indicator">
-      <span>🔍</span> Erkenne Mahlzeit und schätze Kalorien…
-    </div>
-
-    <div class="photo-preview" id="photo-preview">
-      <img id="photo-preview-img" src="" alt="Vorschau">
-    </div>
-
-    <div class="note-wrap" style="margin-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <label style="margin-bottom:0">Beschreibung</label>
-        <button onclick="analyzeText()" id="estimate-btn"
-          style="background:var(--accent-light);color:var(--accent);border:none;border-radius:8px;
-                 padding:4px 12px;font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit">
-          🔥 Kalorien schätzen
-        </button>
-      </div>
-      <textarea id="food-desc" rows="2" placeholder="Wird automatisch erkannt, oder selbst eingeben…"></textarea>
-    </div>
-
-    <div style="margin-top:10px">
-      <label style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);display:block;margin-bottom:6px">Kalorien (kcal)</label>
-      <input type="number" id="food-kcal" min="0" placeholder="wird geschätzt…"
-        style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;
-               font-size:0.95rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
-    </div>
-    <div class="macro-inputs">
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;color:#2980b9;display:block;margin-bottom:4px">KH (g)</label>
-        <input type="number" id="food-kh" min="0" placeholder="—"
-          style="width:100%;border:1.5px solid #d5e8f5;border-radius:8px;padding:8px 10px;
-                 font-size:0.9rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
-      </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;color:#c0392b;display:block;margin-bottom:4px">Fett (g)</label>
-        <input type="number" id="food-fett" min="0" placeholder="—"
-          style="width:100%;border:1.5px solid #f5d5d5;border-radius:8px;padding:8px 10px;
-                 font-size:0.9rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
-      </div>
-      <div>
-        <label style="font-size:0.72rem;font-weight:700;color:#27ae60;display:block;margin-bottom:4px">Protein (g)</label>
-        <input type="number" id="food-pro" min="0" placeholder="—"
-          style="width:100%;border:1.5px solid #d5f0e0;border-radius:8px;padding:8px 10px;
-                 font-size:0.9rem;font-family:inherit;background:#fafaf8;outline:none;color:var(--text)">
-      </div>
-    </div>
-
-    <div class="btn-row" style="margin-top:16px">
-      <button id="food-submit-btn" onclick="submitFood()" disabled>Speichern</button>
-      <button id="food-cancel-btn" onclick="cancelFoodEdit()"
-        style="display:none;background:var(--bg);color:var(--muted);border:1.5px solid var(--border);
-               border-radius:14px;padding:12px 20px;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit">
-        Abbrechen
-      </button>
-      <input type="date" id="food-date" class="date-input">
-    </div>
-  </div>
-
+  <!-- Food list -->
   <div class="card">
     <div class="section-title">Letzte Einträge</div>
     <div id="food-list">
@@ -884,7 +868,7 @@ HTML = """<!DOCTYPE html>
     </div>
   </div>
 
-  </div><!-- end tab-essen -->
+  </div><!-- end tab-eingabe -->
 
   <!-- ══ TAB: ÜBERSICHT ══ -->
   <div id="tab-uebersicht" class="tab-content">
@@ -1065,7 +1049,7 @@ async function deleteEntry(datum) {
 function showToast(msg, err=false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.style.background = err ? '#c0392b' : 'var(--accent)';
+  t.style.background = err ? '#c0392b' : '#1a1a1a';
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
@@ -1080,6 +1064,7 @@ async function loadEntries() {
   const res = await fetch('/entries');
   const data = await res.json();
   const list = document.getElementById('entry-list');
+  if (!list) return; // entry-list nicht mehr auf dieser Seite
   if (!data.entries || data.entries.length === 0) {
     list.innerHTML = '<div class="empty">Noch keine Einträge</div>';
     return;
@@ -1104,8 +1089,8 @@ async function loadEntries() {
 
   // Trend bars (last 14)
   const recent = data.entries.slice(-14);
-  if (recent.length >= 2) {
-    const trendWrap = document.getElementById('trend-wrap');
+  const trendWrap = document.getElementById('trend-wrap');
+  if (recent.length >= 2 && trendWrap) {
     trendWrap.style.display = '';
     const bars = document.getElementById('trend-bars');
     const labels = document.getElementById('trend-labels');
@@ -1129,7 +1114,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
   document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
-  if (name === 'essen') loadFood();
+  if (name === 'eingabe') { loadFood(); loadZiel(); }
   if (name === 'uebersicht') loadOverview();
   if (name === 'statistik') loadStats();
 }
