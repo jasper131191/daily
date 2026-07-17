@@ -526,16 +526,37 @@ HTML = """<!DOCTYPE html>
   }
   .day-macros { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
   .ziel-wrap {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px; background: var(--accent-light);
+    padding: 14px 16px; background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 10px; margin-bottom: 16px;
   }
-  .ziel-wrap label { font-size: 0.82rem; font-weight: 600; color: var(--accent); white-space: nowrap; }
-  .ziel-input {
-    flex: 1; border: 1.5px solid var(--accent); border-radius: 8px;
-    padding: 6px 10px; font-size: 0.9rem; font-family: inherit;
-    background: white; outline: none; color: var(--text); max-width: 100px;
+  .ziel-wrap-title {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px;
   }
+  .ziel-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .ziel-item label {
+    font-size: 0.72rem; font-weight: 600; color: var(--muted);
+    display: block; margin-bottom: 4px;
+  }
+  .ziel-item-row { display: flex; align-items: center; gap: 5px; }
+  .ziel-input {
+    flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 6px 9px; font-size: 0.88rem; font-family: inherit;
+    background: var(--bg); outline: none; color: var(--text); min-width: 0;
+    transition: border-color 0.15s;
+  }
+  .ziel-input:focus { border-color: var(--accent); background: #fff; }
+  .ziel-unit { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+  /* Macro progress in day-header */
+  .macro-progress { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+  .macro-progress-row { display: flex; align-items: center; gap: 8px; }
+  .macro-progress-label { font-size: 0.69rem; color: var(--muted); font-weight: 600; width: 50px; }
+  .macro-progress-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .macro-progress-bar-fill { height: 100%; border-radius: 2px; transition: width 0.35s ease; }
+  .macro-progress-text { font-size: 0.69rem; color: var(--muted); white-space: nowrap; min-width: 80px; text-align: right; }
   .macro-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; }
   .analyzing {
     display: none;
@@ -745,10 +766,41 @@ HTML = """<!DOCTYPE html>
   </div>
 
   <div class="ziel-wrap">
-    <label>🎯 Kalorienziel</label>
-    <input type="number" id="kcal-ziel" class="ziel-input" placeholder="z.B. 2000" min="0"
-      onchange="saveZiel(this.value)">
-    <span style="font-size:0.82rem;color:var(--accent)">kcal / Tag</span>
+    <div class="ziel-wrap-title">Tagesziele</div>
+    <div class="ziel-grid">
+      <div class="ziel-item">
+        <label>Kalorien</label>
+        <div class="ziel-item-row">
+          <input type="number" id="kcal-ziel" class="ziel-input" placeholder="2000" min="0"
+            onchange="saveSetting('kcal_ziel', this.value)">
+          <span class="ziel-unit">kcal</span>
+        </div>
+      </div>
+      <div class="ziel-item">
+        <label>Kohlenhydrate</label>
+        <div class="ziel-item-row">
+          <input type="number" id="kh-ziel" class="ziel-input" placeholder="250" min="0"
+            onchange="saveSetting('kh_ziel', this.value)">
+          <span class="ziel-unit">g</span>
+        </div>
+      </div>
+      <div class="ziel-item">
+        <label>Fett</label>
+        <div class="ziel-item-row">
+          <input type="number" id="fett-ziel" class="ziel-input" placeholder="70" min="0"
+            onchange="saveSetting('fett_ziel', this.value)">
+          <span class="ziel-unit">g</span>
+        </div>
+      </div>
+      <div class="ziel-item">
+        <label>Protein</label>
+        <div class="ziel-item-row">
+          <input type="number" id="pro-ziel" class="ziel-input" placeholder="120" min="0"
+            onchange="saveSetting('pro_ziel', this.value)">
+          <span class="ziel-unit">g</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -1083,18 +1135,21 @@ let foodEntriesMap = {};
 
 document.getElementById('food-date').value = today;
 
-// Kalorienziel laden
+// Ziele laden
 async function loadZiel() {
   try {
     const res = await fetch('/settings');
     const data = await res.json();
-    if (data.kcal_ziel) document.getElementById('kcal-ziel').value = data.kcal_ziel;
+    if (data.kcal_ziel)  document.getElementById('kcal-ziel').value  = data.kcal_ziel;
+    if (data.kh_ziel)    document.getElementById('kh-ziel').value    = data.kh_ziel;
+    if (data.fett_ziel)  document.getElementById('fett-ziel').value  = data.fett_ziel;
+    if (data.pro_ziel)   document.getElementById('pro-ziel').value   = data.pro_ziel;
   } catch(e) {}
 }
-async function saveZiel(val) {
+async function saveSetting(key, val) {
   await fetch('/settings', {
     method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ kcal_ziel: parseInt(val) || null })
+    body: JSON.stringify({ [key]: parseInt(val) || null })
   });
   loadFood();
 }
@@ -1249,7 +1304,10 @@ async function loadFood() {
   const [fRes, sRes] = await Promise.all([fetch('/food-entries'), fetch('/settings')]);
   const fData = await fRes.json();
   const sData = await sRes.json().catch(() => ({}));
-  const ziel = sData.kcal_ziel || null;
+  const ziel     = sData.kcal_ziel || null;
+  const khZiel   = sData.kh_ziel   || null;
+  const fettZiel = sData.fett_ziel || null;
+  const proZiel  = sData.pro_ziel  || null;
   const list = document.getElementById('food-list');
   if (!fData.entries || fData.entries.length === 0) {
     list.innerHTML = '<div class="empty">Noch keine Einträge</div>'; return;
@@ -1263,24 +1321,40 @@ async function loadFood() {
     if (!grouped[e.datum]) grouped[e.datum] = [];
     grouped[e.datum].push(e);
   });
+  // Helper: eine Macro-Zeile mit Progressbar
+  function macroProgRow(label, val, goal, color) {
+    if (!val && !goal) return '';
+    const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
+    const fillColor = goal && pct >= 100 ? '#c0392b' : color;
+    const barHtml = goal
+      ? `<div class="macro-progress-bar-wrap"><div class="macro-progress-bar-fill" style="width:${pct}%;background:${fillColor}"></div></div>`
+      : `<div class="macro-progress-bar-wrap"></div>`;
+    const text = goal ? `${val} / ${goal}g` : `${val}g`;
+    return `<div class="macro-progress-row">
+      <span class="macro-progress-label">${label}</span>
+      ${barHtml}
+      <span class="macro-progress-text">${text}</span>
+    </div>`;
+  }
   list.innerHTML = Object.entries(grouped).map(([datum, entries]) => {
     const totalKcal = entries.reduce((s,e) => s + (e.kcal||0), 0);
     const totalKh   = entries.reduce((s,e) => s + (e.kohlenhydrate||0), 0);
     const totalFett = entries.reduce((s,e) => s + (e.fett||0), 0);
     const totalPro  = entries.reduce((s,e) => s + (e.protein||0), 0);
     const pct = ziel && totalKcal ? Math.min(100, Math.round(totalKcal/ziel*100)) : 0;
-    const barColor = pct >= 100 ? '#c0392b' : pct >= 80 ? '#e8a020' : '#4a7c59';
+    const barColor = pct >= 100 ? '#c0392b' : pct >= 80 ? '#e8a020' : 'var(--accent)';
     const zielHtml = ziel ? `
       <div class="progress-wrap" style="margin-top:6px">
         <div class="progress-bar" style="width:${pct}%;background:${barColor}"></div>
       </div>
       <div style="font-size:0.72rem;color:var(--muted);margin-top:3px">${totalKcal} / ${ziel} kcal (${pct}%)</div>
-    ` : '';
-    const macroHtml = (totalKh||totalFett||totalPro) ? `
-      <div class="day-macros">
-        ${totalKh  ? `<span class="macro-badge macro-kh">KH ${totalKh}g</span>` : ''}
-        ${totalFett? `<span class="macro-badge macro-fat">Fett ${totalFett}g</span>` : ''}
-        ${totalPro ? `<span class="macro-badge macro-pro">Protein ${totalPro}g</span>` : ''}
+    ` : (totalKcal ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:4px">${totalKcal} kcal</div>` : '');
+    const hasMacros = totalKh || totalFett || totalPro;
+    const macroHtml = hasMacros ? `
+      <div class="macro-progress" style="margin-top:${ziel || totalKcal ? '8px' : '6px'}">
+        ${macroProgRow('KH', totalKh, khZiel, '#555')}
+        ${macroProgRow('Fett', totalFett, fettZiel, '#555')}
+        ${macroProgRow('Protein', totalPro, proZiel, '#555')}
       </div>` : '';
     const entriesHtml = entries.map(e => {
       const mKh   = e.kohlenhydrate ? `<span class="macro-badge macro-kh">KH ${e.kohlenhydrate}g</span>` : '';
@@ -1304,7 +1378,7 @@ async function loadFood() {
       <div class="day-header">
         <div class="day-header-top">
           <span class="day-title">${datum}</span>
-          ${totalKcal ? `<span class="day-kcal">🔥 ${totalKcal} kcal</span>` : ''}
+          ${totalKcal ? `<span class="day-kcal">${totalKcal} kcal</span>` : ''}
         </div>
         ${zielHtml}${macroHtml}
       </div>
