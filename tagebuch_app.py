@@ -233,7 +233,7 @@ HTML = """<!DOCTYPE html>
     gap: 4px;
   }
   .star {
-    font-size: 1.75rem;
+    font-size: clamp(1.4rem, 8vw, 1.75rem);
     cursor: pointer;
     color: var(--gold-dim);
     transition: color 0.12s;
@@ -553,21 +553,19 @@ HTML = """<!DOCTYPE html>
     letter-spacing: 0.1em; color: var(--muted); margin-bottom: 10px;
   }
   .ziel-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px;
   }
   .ziel-item label {
     font-size: 0.72rem; font-weight: 600; color: var(--muted);
     display: block; margin-bottom: 4px;
   }
-  .ziel-item-row { display: flex; align-items: center; gap: 5px; }
   .ziel-input {
-    flex: 1; border: 1.5px solid var(--border); border-radius: 8px;
-    padding: 6px 9px; font-size: 0.88rem; font-family: inherit;
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.95rem; font-family: inherit;
     background: var(--bg); outline: none; color: var(--text); min-width: 0;
     transition: border-color 0.15s;
   }
   .ziel-input:focus { border-color: var(--accent); background: #fff; }
-  .ziel-unit { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
   /* Macro cells in day-header */
   .macro-cells { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
   .macro-cell { background: var(--bg); border-radius: 8px; padding: 7px 10px 6px; }
@@ -833,36 +831,24 @@ HTML = """<!DOCTYPE html>
     <div class="ziel-wrap-title">Tagesziele</div>
     <div class="ziel-grid">
       <div class="ziel-item">
-        <label>Kalorien</label>
-        <div class="ziel-item-row">
-          <input type="number" id="kcal-ziel" class="ziel-input" placeholder="2000" min="0"
-            onchange="saveSetting('kcal_ziel', this.value)">
-          <span class="ziel-unit">kcal</span>
-        </div>
+        <label>Kalorien (kcal)</label>
+        <input type="number" id="kcal-ziel" class="ziel-input" placeholder="2000" min="0"
+          onchange="saveSetting('kcal_ziel', this.value)">
       </div>
       <div class="ziel-item">
-        <label>Kohlenhydrate</label>
-        <div class="ziel-item-row">
-          <input type="number" id="kh-ziel" class="ziel-input" placeholder="250" min="0"
-            onchange="saveSetting('kh_ziel', this.value)">
-          <span class="ziel-unit">g</span>
-        </div>
+        <label>Kohlenhydrate (g)</label>
+        <input type="number" id="kh-ziel" class="ziel-input" placeholder="250" min="0"
+          onchange="saveSetting('kh_ziel', this.value)">
       </div>
       <div class="ziel-item">
-        <label>Fett</label>
-        <div class="ziel-item-row">
-          <input type="number" id="fett-ziel" class="ziel-input" placeholder="70" min="0"
-            onchange="saveSetting('fett_ziel', this.value)">
-          <span class="ziel-unit">g</span>
-        </div>
+        <label>Fett (g)</label>
+        <input type="number" id="fett-ziel" class="ziel-input" placeholder="70" min="0"
+          onchange="saveSetting('fett_ziel', this.value)">
       </div>
       <div class="ziel-item">
-        <label>Protein</label>
-        <div class="ziel-item-row">
-          <input type="number" id="pro-ziel" class="ziel-input" placeholder="120" min="0"
-            onchange="saveSetting('pro_ziel', this.value)">
-          <span class="ziel-unit">g</span>
-        </div>
+        <label>Protein (g)</label>
+        <input type="number" id="pro-ziel" class="ziel-input" placeholder="120" min="0"
+          onchange="saveSetting('pro_ziel', this.value)">
       </div>
     </div>
   </div>
