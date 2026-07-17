@@ -1010,7 +1010,7 @@ function startEdit(e) {
   document.getElementById('submit-btn').textContent = 'Speichern';
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('cancel-btn').style.display = '';
-  document.getElementById('header-subtitle').textContent = `Eintrag vom ${e.datum} bearbeiten`;
+  // header-subtitle entfernt
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
@@ -1025,7 +1025,7 @@ function cancelEdit() {
   document.getElementById('entry-date').disabled = false;
   document.getElementById('submit-btn').textContent = 'Eintragen';
   document.getElementById('cancel-btn').style.display = 'none';
-  document.getElementById('header-subtitle').textContent = 'Wie geht es dir heute?';
+  // header-subtitle entfernt
   detectLocation();
   checkReady();
 }
