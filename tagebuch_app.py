@@ -660,13 +660,12 @@ HTML = """<!DOCTYPE html>
 <div class="wrap">
 
   <div class="header">
-    <h1>Mein Tagebuch</h1>
-    <p id="header-subtitle">Wie geht es dir heute?</p>
+    <h1>Daily</h1>
   </div>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('eingabe')">Eingabe</button>
-    <button class="tab-btn" onclick="switchTab('uebersicht')">Übersicht</button>
+    <button class="tab-btn" onclick="switchTab('uebersicht')">Verlauf</button>
     <button class="tab-btn" onclick="switchTab('statistik')">Statistik</button>
   </div>
 
@@ -679,7 +678,7 @@ HTML = """<!DOCTYPE html>
 
     <label class="upload-btn" for="food-photo-input">
       📷 Foto aufnehmen oder auswählen
-      <input type="file" id="food-photo-input" accept="image/*" capture="environment"
+      <input type="file" id="food-photo-input" accept="image/*"
              style="display:none" onchange="previewPhoto(this)">
     </label>
 
