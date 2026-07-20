@@ -898,6 +898,17 @@ HTML = """<!DOCTYPE html>
       <div class="empty">Noch keine Einträge im gewählten Zeitraum</div>
     </div>
 
+    <div class="card">
+      <div class="section-title" style="margin-bottom:12px">Gesamtanalyse</div>
+      <button id="analyse-btn" onclick="runAnalyse()"
+        style="width:100%;background:var(--text);color:#fff;border:none;border-radius:10px;
+               padding:13px;font-size:0.95rem;font-weight:600;cursor:pointer;font-family:inherit">
+        Analyse starten
+      </button>
+      <div id="analyse-result" style="display:none;margin-top:16px;font-size:0.88rem;
+           line-height:1.6;color:var(--text);white-space:pre-wrap"></div>
+    </div>
+
   </div>
 
 </div>
@@ -1695,6 +1706,32 @@ async function detectLocation() {
     status.textContent = '(Zugriff verweigert)';
   }, { timeout: 8000 });
 }
+
+async function runAnalyse() {
+  const btn = document.getElementById('analyse-btn');
+  const result = document.getElementById('analyse-result');
+  btn.disabled = true;
+  btn.textContent = 'Analysiere…';
+  result.style.display = 'none';
+  try {
+    const res = await fetch('/analyse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.ok) {
+      result.textContent = data.text;
+      result.style.display = 'block';
+    } else {
+      showToast('⚠ ' + (data.error || 'Unbekannter Fehler'), true);
+    }
+  } catch(e) {
+    showToast('⚠ Verbindungsfehler', true);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Analyse starten';
+}
 </script>
 </body>
 </html>
@@ -1914,6 +1951,77 @@ def add_food():
         conn.commit()
         conn.close()
         return jsonify({"ok": True, "id": entry_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/analyse", methods=["POST"])
+def analyse():
+    try:
+        if not _anthropic_client or not os.environ.get("ANTHROPIC_API_KEY"):
+            return jsonify({"ok": False, "error": "Kein API Key konfiguriert"})
+        conn = get_db()
+        eintraege = conn.execute(
+            "SELECT datum, stimmung, energie, koerper, notiz FROM eintraege "
+            "ORDER BY substr(datum,7,4)||substr(datum,4,2)||substr(datum,1,2)"
+        ).fetchall()
+        food = conn.execute(
+            "SELECT datum, beschreibung, kcal, kohlenhydrate, fett, protein FROM food_log "
+            "ORDER BY substr(datum,7,4)||substr(datum,4,2)||substr(datum,1,2), uhrzeit"
+        ).fetchall()
+        gewicht = conn.execute(
+            "SELECT datum, wert FROM gewicht ORDER BY substr(datum,7,4)||substr(datum,4,2)||substr(datum,1,2)"
+        ).fetchall()
+        settings = {r["key"]: json.loads(r["value"]) for r in conn.execute("SELECT key, value FROM settings").fetchall()}
+        conn.close()
+
+        ziel_kcal = settings.get("kcal_ziel", 2100)
+        ziel_kh   = settings.get("kh_ziel", 200)
+        ziel_fett = settings.get("fett_ziel", 70)
+        ziel_pro  = settings.get("pro_ziel", 160)
+
+        lines = [
+            f"Tagesziele: {ziel_kcal} kcal, {ziel_kh}g KH, {ziel_fett}g Fett, {ziel_pro}g Protein",
+            f"Nutzer: 34 Jahre, 130 kg\n"
+        ]
+        # Tagebuch
+        if eintraege:
+            lines.append("TAGEBUCH-EINTRÄGE:")
+            for e in eintraege:
+                notiz = f' – "{e["notiz"]}"' if e["notiz"] else ""
+                lines.append(f'{e["datum"]}: Stimmung {e["stimmung"]}/5, Energie {e["energie"]}/5, Körper {e["koerper"]}/5{notiz}')
+        # Essen (nach Tag gruppiert)
+        if food:
+            lines.append("\nESSEN:")
+            day = {}
+            for f in food:
+                day.setdefault(f["datum"], []).append(f)
+            for datum, items in day.items():
+                kcal = sum(i["kcal"] or 0 for i in items)
+                kh   = sum(i["kohlenhydrate"] or 0 for i in items)
+                fett = sum(i["fett"] or 0 for i in items)
+                pro  = sum(i["protein"] or 0 for i in items)
+                names = ", ".join(i["beschreibung"] for i in items if i["beschreibung"])
+                lines.append(f'{datum}: {kcal} kcal | KH {kh}g | Fett {fett}g | Protein {pro}g — {names}')
+        # Gewicht
+        if gewicht:
+            lines.append("\nGEWICHT:")
+            for g in gewicht:
+                lines.append(f'{g["datum"]}: {g["wert"]} kg')
+
+        prompt = "\n".join(lines)
+        prompt += (
+            "\n\nBitte analysiere diese Daten auf Deutsch und gib eine ehrliche, präzise Gesamtauswertung. "
+            "Geh ein auf: 1) Ernährungsmuster und Makro-Erfüllung, 2) Stimmung/Energie/Körper-Trends, "
+            "3) Zusammenhänge zwischen Essen und Wohlbefinden falls erkennbar, "
+            "4) konkrete Verbesserungsvorschläge. Sei direkt und sprich den Nutzer als 'du' an."
+        )
+        msg = _anthropic_client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({"ok": True, "text": msg.content[0].text})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
