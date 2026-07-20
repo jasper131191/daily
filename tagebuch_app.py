@@ -300,7 +300,8 @@ HTML = """<!DOCTYPE html>
 
   /* Toast */
   #toast {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    position: fixed; bottom: calc(32px + env(safe-area-inset-bottom, 0px)); left: 50%;
+    transform: translateX(-50%) translateY(80px);
     background: #1a1a1a; color: #fff;
     padding: 10px 20px; border-radius: 8px;
     font-weight: 500; font-size: 0.88rem;
