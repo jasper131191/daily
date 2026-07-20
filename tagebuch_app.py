@@ -2009,16 +2009,40 @@ def analyse():
             for g in gewicht:
                 lines.append(f'{g["datum"]}: {g["wert"]} kg')
 
-        prompt = "\n".join(lines)
-        prompt += (
-            "\n\nBitte analysiere diese Daten auf Deutsch und gib eine ehrliche, präzise Gesamtauswertung. "
-            "Geh ein auf: 1) Ernährungsmuster und Makro-Erfüllung, 2) Stimmung/Energie/Körper-Trends, "
-            "3) Zusammenhänge zwischen Essen und Wohlbefinden falls erkennbar, "
-            "4) konkrete Verbesserungsvorschläge. Sei direkt und sprich den Nutzer als 'du' an."
+        data_text = "\n".join(lines)
+        n_tage_essen = len(set(f["datum"] for f in food)) if food else 0
+        n_tage_tb    = len(eintraege)
+
+        system = (
+            "Du bist ein wohlwollender persönlicher Gesundheitsbegleiter. "
+            "Deine Analyse ist konkret, ehrlich und konstruktiv – aber nie alarmistisch. "
+            "Du bewertest nur, was die Daten wirklich hergeben. "
+            "Bei wenigen Einträgen sagst du klar, dass die Datenbasis noch schmal ist, "
+            "und konzentrierst dich auf Muster, die schon erkennbar sind. "
+            "Schreibe auf Deutsch, sprich den Nutzer als 'du' an, keine Überschriften mit ##, "
+            "fließender Text in Absätzen."
         )
+
+        prompt = (
+            f"Hier sind meine Tracking-Daten der letzten Zeit "
+            f"({n_tage_tb} Tagebucheinträge, {n_tage_essen} Tage mit Essenserfassung):\n\n"
+            f"{data_text}\n\n"
+            "Bitte gib mir eine Gesamtanalyse in drei Teilen:\n\n"
+            "1. ERNÄHRUNG: Was fällt bei meinen tatsächlich erfassten Mahlzeiten auf? "
+            "Wie gut treffe ich meine Tagesziele im Schnitt? Welche Lebensmittel dominieren? "
+            "Was könnte ich konkret anpassen – aber nur wenn die Daten das wirklich nahelegen.\n\n"
+            "2. STIMMUNG & WOHLBEFINDEN: Wie schwanken Stimmung, Energie und Körpergefühl über die Tage? "
+            "Gibt es erkennbare Ausreißer nach oben oder unten? Was sagen die Notizen?\n\n"
+            "3. ZUSAMMENHÄNGE: Gibt es Tage, an denen Essen und Wohlbefinden auffällig korrelieren? "
+            "Wenn die Datenbasis dafür noch zu klein ist, sag das kurz und konzentriere dich auf das, "
+            "was schon erkennbar ist.\n\n"
+            "Halte die Analyse kompakt (ca. 200-300 Wörter). Keine Pauschalurteile, keine übertriebenen Warnungen."
+        )
+
         msg = _anthropic_client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+            max_tokens=1200,
+            system=system,
             messages=[{"role": "user", "content": prompt}]
         )
         return jsonify({"ok": True, "text": msg.content[0].text})
