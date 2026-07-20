@@ -1095,6 +1095,23 @@ async function loadEntries() {
   }
 }
 
+// ── Makro-Kachel (global, wird in loadFood + loadOverview genutzt) ──
+function macroCell(label, val, goal) {
+  if (!val && !goal) return '';
+  const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
+  const color = pct >= 100 ? '#c0392b' : pct >= 80 ? 'var(--accent)' : pct >= 50 ? '#d4920a' : '#c0392b';
+  const valHtml = goal
+    ? `<div class="macro-cell-value">${val}g <span class="macro-cell-goal">/ ${goal}g</span></div>`
+    : `<div class="macro-cell-value">${val}g</div>`;
+  const barHtml = goal
+    ? `<div class="macro-cell-bar"><div class="macro-cell-fill" style="width:${pct}%;background:${color}"></div></div>`
+    : '';
+  return `<div class="macro-cell">
+    <div class="macro-cell-label">${label}</div>
+    ${valHtml}${barHtml}
+  </div>`;
+}
+
 // ── Tab switching ────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -1313,23 +1330,6 @@ async function loadFood() {
     if (!grouped[e.datum]) grouped[e.datum] = [];
     grouped[e.datum].push(e);
   });
-  // Helper: Kachel-Fortschrittsanzeige für ein Makro
-  function macroCell(label, val, goal) {
-    if (!val && !goal) return '';
-    const pct = goal ? Math.min(100, Math.round(val / goal * 100)) : 0;
-    const color = pct >= 100 ? '#c0392b' : pct >= 80 ? 'var(--accent)' : pct >= 50 ? '#d4920a' : '#c0392b';
-    const valHtml = goal
-      ? `<div class="macro-cell-value">${val}g <span class="macro-cell-goal">/ ${goal}g</span></div>`
-      : `<div class="macro-cell-value">${val}g</div>`;
-    const barHtml = goal
-      ? `<div class="macro-cell-bar"><div class="macro-cell-fill" style="width:${pct}%;background:${color}"></div></div>`
-      : '';
-    return `<div class="macro-cell">
-      <div class="macro-cell-label">${label}</div>
-      ${valHtml}
-      ${barHtml}
-    </div>`;
-  }
   list.innerHTML = Object.entries(grouped).map(([datum, entries]) => {
     const totalKcal = entries.reduce((s,e) => s + (e.kcal||0), 0);
     const totalKh   = entries.reduce((s,e) => s + (e.kohlenhydrate||0), 0);
@@ -1390,7 +1390,10 @@ async function loadOverview() {
   const eData = await eRes.json();
   const fData = await fRes.json();
   const sData = await sRes.json().catch(() => ({}));
-  const ziel  = sData.kcal_ziel || null;
+  const ziel     = sData.kcal_ziel  || null;
+  const khZiel   = sData.kh_ziel    || null;
+  const fettZiel = sData.fett_ziel  || null;
+  const proZiel  = sData.pro_ziel   || null;
   const list  = document.getElementById('overview-list');
 
   // Lookup maps
@@ -1444,25 +1447,34 @@ async function loadOverview() {
     let esHtml = '';
     if (foods.length) {
       const totalKcal = foods.reduce((s, f) => s + (f.kcal || 0), 0);
+      const totalKh   = foods.reduce((s, f) => s + (f.kohlenhydrate || 0), 0);
+      const totalFett = foods.reduce((s, f) => s + (f.fett || 0), 0);
+      const totalPro  = foods.reduce((s, f) => s + (f.protein || 0), 0);
       const pct      = ziel && totalKcal ? Math.min(100, Math.round(totalKcal / ziel * 100)) : 0;
       const barColor = pct >= 100 ? '#c0392b' : pct >= 80 ? '#e8a020' : '#4a7c59';
       const progressHtml = ziel ? `
-        <div class="progress-wrap" style="margin:4px 0 6px">
+        <div class="progress-wrap" style="margin:4px 0 3px">
           <div class="progress-bar" style="width:${pct}%;background:${barColor}"></div>
         </div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:4px">${totalKcal} / ${ziel} kcal (${pct}%)</div>` : '';
+        <div style="font-size:0.72rem;color:var(--muted);margin-bottom:6px">${totalKcal} / ${ziel} kcal (${pct}%)</div>` : '';
+      const macrosHtml = (totalKh || totalFett || totalPro) ? `
+        <div class="macro-cells" style="margin-bottom:8px">
+          ${macroCell('KH', totalKh, khZiel)}
+          ${macroCell('Fett', totalFett, fettZiel)}
+          ${macroCell('Protein', totalPro, proZiel)}
+        </div>` : '';
       const items = foods.map(f => `
         <div class="essen-item-row">
           <span class="essen-item-time">${f.uhrzeit}</span>
           <span style="flex:1;line-height:1.3">${f.beschreibung || '–'}</span>
-          ${f.kcal ? `<span class="essen-item-kcal">🔥 ${f.kcal}</span>` : ''}
+          ${f.kcal ? `<span class="essen-item-kcal">${f.kcal} kcal</span>` : ''}
         </div>`).join('');
       esHtml = `<div class="day-essen">
         <div class="day-essen-header">
-          <span class="essen-label">🍽️ Essen</span>
-          ${totalKcal ? `<span style="font-weight:700;font-size:0.88rem;color:#e67e22">🔥 ${totalKcal} kcal</span>` : ''}
+          <span class="essen-label">Essen</span>
+          ${totalKcal ? `<span style="font-weight:700;font-size:0.85rem;color:var(--text)">${totalKcal} kcal</span>` : ''}
         </div>
-        ${progressHtml}${items}
+        ${progressHtml}${macrosHtml}${items}
       </div>`;
     } else {
       esHtml = `<div class="day-essen"><div class="no-entry">Kein Essen eingetragen</div></div>`;
